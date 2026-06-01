@@ -112,6 +112,13 @@ pub(all) struct Vctx {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct Pout {
+  tree : Tree?
+  posx : Int
+  digs : Array[Diag]
+} derive(Debug, Eq)
+
+///|
 pub(all) struct Rout {
   segs : Array[String]
 } derive(Debug, Eq)
@@ -153,7 +160,7 @@ pub(all) struct Tstx {
 
 ///|
 pub trait Pars {
-  fn pars(Self, String) -> Tree?
+  fn pars(Self, String) -> Pout
 }
 
 ///|
@@ -323,6 +330,208 @@ pub fn rgxx(text : String) -> Expr {
 }
 
 ///|
+pub fn pars(expr : Expr, text : String) -> Pout {
+  let out = pexp(expr, text, 0)
+  match out.tree {
+    Some(_) => out
+    None => out
+  }
+}
+
+///|
+fn pexp(expr : Expr, text : String, posx : Int) -> Pout {
+  let posx = sksp(text, posx)
+  match expr {
+    Litx(value) => plit(value, text, posx)
+    Tokn(name) => ptok(name, text, posx)
+    Rgxx(patt) => preg(patt, text, posx)
+    Seqx(items) => pseq(items, text, posx)
+    Altx(items) => palt(items, text, posx)
+    Many(item) => pmny(item, text, posx)
+    Optx(item) => {
+      let out = pexp(item, text, posx)
+      match out.tree {
+        Some(_) => out
+        None => { tree: Some(tree("optx", "", kids=[])), posx, digs: [] }
+      }
+    }
+    Atom => { tree: Some(tree("atom", "", kids=[])), posx, digs: [] }
+  }
+}
+
+///|
+fn pseq(items : Array[Expr], text : String, posx : Int) -> Pout {
+  let kids : Array[Tree] = []
+  let digs : Array[Diag] = []
+  let mut posx = posx
+  for item in items {
+    let out = pexp(item, text, posx)
+    for diag in out.digs {
+      digs.push(diag)
+    }
+    match out.tree {
+      Some(tree) => {
+        kids.push(tree)
+        posx = out.posx
+      }
+      None => return { tree: None, posx, digs }
+    }
+  }
+  { tree: Some(tree("seqx", "", kids~)), posx, digs }
+}
+
+///|
+fn palt(items : Array[Expr], text : String, posx : Int) -> Pout {
+  let digs : Array[Diag] = []
+  for item in items {
+    let out = pexp(item, text, posx)
+    match out.tree {
+      Some(node) =>
+        return {
+          tree: Some(tree("altx", "", kids=[node])),
+          posx: out.posx,
+          digs: out.digs,
+        }
+      None =>
+        for diag in out.digs {
+          digs.push(diag)
+        }
+    }
+  }
+  digs.push(fail("no alternative matched"))
+  { tree: None, posx, digs }
+}
+
+///|
+fn pmny(item : Expr, text : String, posx : Int) -> Pout {
+  let kids : Array[Tree] = []
+  let digs : Array[Diag] = []
+  let mut posx = posx
+  let mut keep = true
+  while keep {
+    let out = pexp(item, text, posx)
+    match out.tree {
+      Some(tree) =>
+        if out.posx == posx {
+          keep = false
+        } else {
+          kids.push(tree)
+          posx = out.posx
+        }
+      None => keep = false
+    }
+  }
+  { tree: Some(tree("many", "", kids~)), posx, digs }
+}
+
+///|
+fn plit(value : String, text : String, posx : Int) -> Pout {
+  if pref(text, posx, value) {
+    {
+      tree: Some(
+        tree("litx", value, kids=[], span=span("", posx, posx + value.length())),
+      ),
+      posx: posx + value.length(),
+      digs: [],
+    }
+  } else {
+    { tree: None, posx, digs: [fail("expected literal").hint(value)] }
+  }
+}
+
+///|
+fn ptok(name : String, text : String, posx : Int) -> Pout {
+  let endx = scan(text, posx, true)
+  if endx > posx {
+    let value = text.view(start_offset=posx, end_offset=endx).to_owned()
+    {
+      tree: Some(tree(name, value, kids=[], span=span("", posx, endx))),
+      posx: endx,
+      digs: [],
+    }
+  } else {
+    { tree: None, posx, digs: [fail("expected token").hint(name)] }
+  }
+}
+
+///|
+fn preg(patt : String, text : String, posx : Int) -> Pout {
+  let endx = match patt {
+    "[0-9]+" => scan(text, posx, false)
+    "[a-zA-Z_][a-zA-Z0-9_]*" => scan(text, posx, true)
+    _ => if pref(text, posx, patt) { posx + patt.length() } else { posx }
+  }
+  if endx > posx {
+    let value = text.view(start_offset=posx, end_offset=endx).to_owned()
+    {
+      tree: Some(tree("rgxx", value, kids=[], span=span("", posx, endx))),
+      posx: endx,
+      digs: [],
+    }
+  } else {
+    { tree: None, posx, digs: [fail("expected pattern").hint(patt)] }
+  }
+}
+
+///|
+fn sksp(text : String, posx : Int) -> Int {
+  let mut posx = posx
+  while posx < text.length() && wspc(text[posx].to_int()) {
+    posx = posx + 1
+  }
+  posx
+}
+
+///|
+fn scan(text : String, posx : Int, name : Bool) -> Int {
+  let mut posx = posx
+  if posx >= text.length() {
+    return posx
+  }
+  if name {
+    if !nsta(text[posx].to_int()) {
+      return posx
+    }
+    posx = posx + 1
+    while posx < text.length() && nchx(text[posx].to_int()) {
+      posx = posx + 1
+    }
+  } else {
+    while posx < text.length() && digt(text[posx].to_int()) {
+      posx = posx + 1
+    }
+  }
+  posx
+}
+
+///|
+fn pref(text : String, posx : Int, pref : String) -> Bool {
+  let endx = posx + pref.length()
+  endx <= text.length() &&
+  text.view(start_offset=posx, end_offset=endx).to_owned() == pref
+}
+
+///|
+fn wspc(ch : Int) -> Bool {
+  ch == 32 || ch == 10 || ch == 9 || ch == 13
+}
+
+///|
+fn digt(ch : Int) -> Bool {
+  ch >= 48 && ch <= 57
+}
+
+///|
+fn nsta(ch : Int) -> Bool {
+  (ch >= 97 && ch <= 122) || (ch >= 65 && ch <= 90) || ch == 95
+}
+
+///|
+fn nchx(ch : Int) -> Bool {
+  nsta(ch) || digt(ch)
+}
+
+///|
 pub fn atom() -> Expr {
   Atom
 }
@@ -389,6 +598,46 @@ pub fn Vctx::fail(self : Vctx, msg : String) -> Vctx {
 ///|
 pub fn chec(v : Vctx, ok : Bool, msg : String) -> Vctx {
   v.chec(ok, msg)
+}
+
+///|
+pub fn vspc(value : Dslx) -> Array[Diag] {
+  let spec = value.spec
+  let digs : Array[Diag] = []
+  if spec.name.length() == 0 {
+    digs.push(fail("empty spec name"))
+  }
+  if spec.nods.length() == 0 {
+    digs.push(warn("spec has no node"))
+  }
+  if spec.ruls.length() == 0 {
+    digs.push(warn("spec has no rule"))
+  }
+  for node in spec.nods {
+    if node.name.length() == 0 {
+      digs.push(fail("empty node name"))
+    }
+    if node.casx.length() == 0 {
+      digs.push(warn("node has no case").hint(node.name))
+    }
+    for item in node.casx {
+      if item.name.length() == 0 {
+        digs.push(fail("empty case name").hint(node.name))
+      }
+      if item.flds.length() == 0 {
+        digs.push(warn("case has no field").hint(item.name))
+      }
+    }
+  }
+  for rule in spec.ruls {
+    if rule.name.length() == 0 {
+      digs.push(fail("empty rule name"))
+    }
+    if rule.expr is Atom {
+      digs.push(warn("rule has no body").hint(rule.name))
+    }
+  }
+  digs
 }
 
 ///|
@@ -485,8 +734,15 @@ fn padx(size : Int) -> String {
 
 ///|
 fn emsp(spec : Spec) -> Emix {
-  let content = "dslx " + spec.name + "\n"
-  { spec, mods: [file(path(spec.name + ".mbt"), content)] }
+  {
+    spec,
+    mods: [
+      file(path("astx.mbt"), east(spec)),
+      file(path("pars.mbt"), eprs(spec)),
+      file(path("vald.mbt"), evld(spec)),
+      file(path("prnt.mbt"), eprt(spec)),
+    ],
+  }
 }
 
 ///|
@@ -512,6 +768,38 @@ pub fn path(text : String) -> String {
 ///|
 pub fn mods(value : Emix) -> Array[File] {
   value.mods
+}
+
+///|
+fn east(spec : Spec) -> String {
+  let mut out = "// generated astx for " + spec.name + "\n"
+  for node in spec.nods {
+    out = out + "pub(all) enum " + node.name + " {\n"
+    for item in node.casx {
+      out = out + "  " + item.name + "\n"
+    }
+    out = out + "} derive(Debug, Eq)\n"
+  }
+  out
+}
+
+///|
+fn eprs(spec : Spec) -> String {
+  let mut out = "// generated pars for " + spec.name + "\n"
+  for rule in spec.ruls {
+    out = out + "pub fn " + rule.name + "() -> Unit { () }\n"
+  }
+  out
+}
+
+///|
+fn evld(spec : Spec) -> String {
+  "// generated vald for " + spec.name + "\n"
+}
+
+///|
+fn eprt(spec : Spec) -> String {
+  "// generated prnt for " + spec.name + "\n"
 }
 
 ///|
