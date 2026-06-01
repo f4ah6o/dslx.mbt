@@ -1,0 +1,311 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/dslx"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn altx(Array[Expr]) -> Expr
+
+pub fn atom() -> Expr
+
+pub fn attr(String, String) -> (String, String)
+
+pub fn bind(String) -> String
+
+pub fn body(Rule, Expr) -> Rule
+
+pub fn brkx() -> Docx
+
+pub fn case(String) -> Case
+
+pub fn chec(Vctx, Bool, String) -> Vctx
+
+pub fn chid(Html) -> Html
+
+pub fn diag(String, String) -> Diag
+
+pub fn dslx(String) -> Dslx
+
+pub fn elem(String) -> String
+
+pub fn emit(Dslx) -> Emix
+
+pub fn evnt(String) -> String
+
+pub fn fail(String) -> Diag
+
+pub fn file(String, String) -> File
+
+pub fn fldx(String, String) -> Fldx
+
+pub fn from(Array[String]) -> Array[String]
+
+pub fn givn(String) -> String
+
+pub fn grup(Docx) -> Docx
+
+pub fn hint(String) -> String
+
+pub fn html() -> Html
+
+pub fn join(Array[Docx]) -> Docx
+
+pub fn limt(Int) -> Int
+
+pub fn line() -> Docx
+
+pub fn litx(String) -> Expr
+
+pub fn mach() -> Mach
+
+pub fn many(Expr) -> Expr
+
+pub fn mods(Emix) -> Array[File]
+
+pub fn name(Dslx) -> String
+
+pub fn nest(Int, Docx) -> Docx
+
+pub fn node(String) -> Node
+
+pub fn optx(Expr) -> Expr
+
+pub fn ordr(String) -> String
+
+pub fn parm(String) -> String
+
+pub fn path(String) -> String
+
+pub fn prat() -> Prat
+
+pub fn prnt(Docx) -> String
+
+pub fn rgxx(String) -> Expr
+
+pub fn rout() -> Rout
+
+pub fn rule(String) -> Rule
+
+pub fn seqx(Array[Expr]) -> Expr
+
+pub fn slct(Array[String]) -> Array[String]
+
+pub fn span(String, Int, Int) -> Span
+
+pub fn spec(String) -> Spec
+
+pub fn sqlx() -> Sqlx
+
+pub fn stat(String) -> String
+
+pub fn text(String) -> Docx
+
+pub fn tokn(String) -> Expr
+
+pub fn tran(String) -> String
+
+pub fn tree(String, String, kids? : Array[Tree], span? : Span) -> Tree
+
+pub fn tstx(String) -> Tstx
+
+pub fn vald(Tree) -> Vctx
+
+pub fn warn(String) -> Diag
+
+pub fn when(String) -> String
+
+pub fn wher(String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct Case {
+  name : String
+  flds : Array[Fldx]
+} derive(Eq, @debug.Debug)
+pub fn Case::fldx(Self, Fldx) -> Self
+
+pub(all) struct Diag {
+  kind : String
+  text : String
+  span : Span?
+  hint : String?
+} derive(Eq, @debug.Debug)
+pub fn Diag::hint(Self, String) -> Self
+pub fn Diag::span(Self, Span) -> Self
+
+pub(all) enum Docx {
+  Text(String)
+  Line
+  Join(Array[Docx])
+  Grup(Docx)
+  Nest(Int, Docx)
+  Brkx
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Dslx {
+  spec : Spec
+} derive(Eq, @debug.Debug)
+pub fn Dslx::diag(Self, Diag) -> Self
+pub fn Dslx::emit(Self) -> Emix
+pub fn Dslx::node(Self, Node) -> Self
+pub fn Dslx::rule(Self, Rule) -> Self
+
+pub(all) struct Emix {
+  spec : Spec
+  mods : Array[File]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Expr {
+  Seqx(Array[Expr])
+  Altx(Array[Expr])
+  Many(Expr)
+  Optx(Expr)
+  Litx(String)
+  Tokn(String)
+  Rgxx(String)
+  Atom
+} derive(Eq, @debug.Debug)
+
+pub(all) struct File {
+  path : String
+  text : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Fldx {
+  name : String
+  typx : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Html {
+  name : String
+  atrs : Array[(String, String)]
+  text : String?
+  chid : Array[Html]
+} derive(Eq, @debug.Debug)
+pub fn Html::attr(Self, String, String) -> Self
+pub fn Html::chid(Self, Self) -> Self
+pub fn Html::elem(Self, String) -> Self
+pub fn Html::text(Self, String) -> Self
+
+pub(all) struct Mach {
+  stat : Array[String]
+  tran : Array[String]
+  evnt : Array[String]
+  init : String?
+} derive(Eq, @debug.Debug)
+pub fn Mach::evnt(Self, String) -> Self
+pub fn Mach::init(Self, String) -> Self
+pub fn Mach::stat(Self, String) -> Self
+pub fn Mach::tran(Self, String) -> Self
+
+pub(all) struct Node {
+  name : String
+  casx : Array[Case]
+} derive(Eq, @debug.Debug)
+pub fn Node::case(Self, Case) -> Self
+
+pub(all) struct Oper {
+  kind : String
+  text : String
+  prec : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Prat {
+  opsx : Array[Oper]
+  atom : Expr
+} derive(Eq, @debug.Debug)
+pub fn Prat::atom(Self, Expr) -> Self
+pub fn Prat::infx(Self, String, Int) -> Self
+pub fn Prat::post(Self, String, Int) -> Self
+pub fn Prat::pref(Self, String, Int) -> Self
+
+pub(all) struct Rout {
+  segs : Array[String]
+} derive(Eq, @debug.Debug)
+pub fn Rout::bind(Self, String) -> Self
+pub fn Rout::litx(Self, String) -> Self
+pub fn Rout::parm(Self, String) -> Self
+
+pub(all) struct Rule {
+  name : String
+  expr : Expr
+} derive(Eq, @debug.Debug)
+pub fn Rule::body(Self, Expr) -> Self
+
+pub(all) struct Span {
+  file : String
+  from : Int
+  upto : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Spec {
+  name : String
+  nods : Array[Node]
+  ruls : Array[Rule]
+  digs : Array[Diag]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Sqlx {
+  cols : Array[String]
+  from : Array[String]
+  wher : String?
+  join : Array[String]
+  grup : Array[String]
+  ordr : Array[String]
+  limt : Int?
+} derive(Eq, @debug.Debug)
+pub fn Sqlx::from(Self, Array[String]) -> Self
+pub fn Sqlx::grup(Self, String) -> Self
+pub fn Sqlx::join(Self, String) -> Self
+pub fn Sqlx::limt(Self, Int) -> Self
+pub fn Sqlx::ordr(Self, String) -> Self
+pub fn Sqlx::slct(Self, Array[String]) -> Self
+pub fn Sqlx::wher(Self, String) -> Self
+
+pub(all) struct Tree {
+  kind : String
+  text : String
+  kids : Array[Tree]
+  span : Span?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Tstx {
+  name : String
+  givn : Array[String]
+  when : Array[String]
+  chec : Array[String]
+} derive(Eq, @debug.Debug)
+pub fn Tstx::chec(Self, String) -> Self
+pub fn Tstx::givn(Self, String) -> Self
+pub fn Tstx::when(Self, String) -> Self
+
+pub(all) struct Vctx {
+  tree : Tree
+  digs : Array[Diag]
+} derive(Eq, @debug.Debug)
+pub fn Vctx::chec(Self, Bool, String) -> Self
+pub fn Vctx::fail(Self, String) -> Self
+pub fn Vctx::warn(Self, String) -> Self
+
+// Type aliases
+
+// Traits
+pub trait Emit {
+  fn emit(Self) -> Array[File]
+}
+
+pub trait Pars {
+  fn pars(Self, String) -> Tree?
+}
+
+pub trait Prnt {
+  fn prnt(Self) -> Docx
+}
+
+pub trait Vald {
+  fn vald(Self, Tree) -> Array[Diag]
+}
+

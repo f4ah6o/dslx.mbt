@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/dslx/dslx/vald"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn vald(String) -> Vald
+
+// Errors
+
+// Types and methods
+pub(all) struct Vald {
+  name : String
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

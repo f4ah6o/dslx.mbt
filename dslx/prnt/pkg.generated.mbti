@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "f4ah6o/dslx/dslx/prnt"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn prnt(String) -> Prnt
+
+// Errors
+
+// Types and methods
+pub(all) struct Prnt {
+  text : String
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
