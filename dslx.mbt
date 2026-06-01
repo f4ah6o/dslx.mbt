@@ -418,6 +418,8 @@ fn pmny(item : Expr, text : String, posx : Int) -> Pout {
       None => keep = false
     }
   }
+  // A failed child parse terminates zero-or-more parsing; it is not a
+  // diagnostic for the caller because Many succeeds with the trees collected.
   { tree: Some(tree("many", "", kids~)), posx, digs: [] }
 }
 
@@ -789,9 +791,63 @@ fn eprs(spec : Spec) -> String {
     out = out +
       "pub fn " +
       rule.name +
-      "(text : String) -> Pout { pars(atom(), text) }\n"
+      "(text : String) -> Pout { pars(" +
+      sexp(rule.expr) +
+      ", text) }\n"
   }
   out
+}
+
+///|
+fn sexp(expr : Expr) -> String {
+  match expr {
+    Seqx(items) => "seqx([" + sexa(items) + "])"
+    Altx(items) => "altx([" + sexa(items) + "])"
+    Many(item) => "many(" + sexp(item) + ")"
+    Optx(item) => "optx(" + sexp(item) + ")"
+    Litx(text) => "litx(" + qstr(text) + ")"
+    Tokn(name) => "tokn(" + qstr(name) + ")"
+    Rgxx(patt) => "rgxx(" + qstr(patt) + ")"
+    Atom => "atom()"
+  }
+}
+
+///|
+fn sexa(items : Array[Expr]) -> String {
+  let mut out = ""
+  let mut i = 0
+  for item in items {
+    if i > 0 {
+      out = out + ", "
+    }
+    out = out + sexp(item)
+    i = i + 1
+  }
+  out
+}
+
+///|
+fn qstr(text : String) -> String {
+  let mut out = "\""
+  let mut posx = 0
+  while posx < text.length() {
+    let ch = text[posx].to_int()
+    if ch == 34 {
+      out = out + "\\\""
+    } else if ch == 92 {
+      out = out + "\\\\"
+    } else if ch == 10 {
+      out = out + "\\n"
+    } else if ch == 13 {
+      out = out + "\\r"
+    } else if ch == 9 {
+      out = out + "\\t"
+    } else {
+      out = out + text.view(start_offset=posx, end_offset=posx + 1).to_owned()
+    }
+    posx = posx + 1
+  }
+  out + "\""
 }
 
 ///|

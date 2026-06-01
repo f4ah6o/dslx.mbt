@@ -107,9 +107,15 @@ test "pretty printer renders nested docs" {
 
 ///|
 test "codegen returns virtual files" {
-  let out = @dslx.emit(@dslx.dslx("sql"))
+  let out = @dslx.emit(
+    @dslx.dslx("sql").rule(@dslx.rule("expr").body(@dslx.litx("if"))),
+  )
   inspect(@dslx.mods(out).length(), content="4")
   inspect(@dslx.mods(out)[0].path, content="astx.mbt")
+  inspect(
+    @dslx.mods(out)[1].text,
+    content="// generated pars for sql\npub fn expr(text : String) -> Pout { pars(litx(\"if\"), text) }\n",
+  )
 }
 
 ///|
