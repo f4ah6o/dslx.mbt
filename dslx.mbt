@@ -331,11 +331,7 @@ pub fn rgxx(text : String) -> Expr {
 
 ///|
 pub fn pars(expr : Expr, text : String) -> Pout {
-  let out = pexp(expr, text, 0)
-  match out.tree {
-    Some(_) => out
-    None => out
-  }
+  pexp(expr, text, 0)
 }
 
 ///|
@@ -387,6 +383,8 @@ fn palt(items : Array[Expr], text : String, posx : Int) -> Pout {
     let out = pexp(item, text, posx)
     match out.tree {
       Some(node) =>
+        // Earlier failed alternatives are intentionally discarded once a later
+        // branch matches, so callers only see diagnostics for the chosen parse.
         return {
           tree: Some(tree("altx", "", kids=[node])),
           posx: out.posx,
@@ -456,6 +454,8 @@ fn ptok(name : String, text : String, posx : Int) -> Pout {
 
 ///|
 fn preg(patt : String, text : String, posx : Int) -> Pout {
+  // DSLX v0.2 keeps rgxx lightweight: two common token patterns get scanner
+  // support, and other patterns are treated as literal prefixes.
   let endx = match patt {
     "[0-9]+" => scan(text, posx, false)
     "[a-zA-Z_][a-zA-Z0-9_]*" => scan(text, posx, true)
