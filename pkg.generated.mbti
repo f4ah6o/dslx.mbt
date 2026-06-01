@@ -84,11 +84,15 @@ pub fn prat() -> Prat
 
 pub fn prnt(Docx) -> String
 
+pub fn refx(String) -> Expr
+
 pub fn rgxx(String) -> Expr
 
 pub fn rout() -> Rout
 
 pub fn rule(String) -> Rule
+
+pub fn runx(Dslx, String, String) -> Pout
 
 pub fn seqx(Array[Expr]) -> Expr
 
@@ -170,6 +174,7 @@ pub(all) enum Expr {
   Litx(String)
   Tokn(String)
   Rgxx(String)
+  Refx(String)
   Atom
 } derive(Eq, @debug.Debug)
 

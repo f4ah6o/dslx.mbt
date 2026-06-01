@@ -59,6 +59,63 @@ test "parser supports alternatives many and optional" {
 }
 
 ///|
+test "runx resolves named rule references" {
+  let spec = @dslx.dslx("core")
+    .rule(@dslx.rule("name").body(@dslx.rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+    .rule(
+      @dslx.rule("decl").body(
+        @dslx.seqx([@dslx.litx("let"), @dslx.refx("name"), @dslx.rgxx("[0-9]+")]),
+      ),
+    )
+  let out = @dslx.runx(spec, "decl", "let alpha_1 42")
+  inspect(out.posx, content="14")
+  inspect(out.digs.length(), content="0")
+  match out.tree {
+    Some(tree) => inspect(tree.kids[1].kind, content="refx:name")
+    None => inspect("none", content="tree")
+  }
+}
+
+///|
+test "unsupported rgxx fails validation and parsing" {
+  let spec = @dslx.dslx("core").rule(
+    @dslx.rule("bad").body(@dslx.rgxx("[a-z]+")),
+  )
+  let digs = @dslx.vspc(spec)
+  inspect(digs[1].text, content="unsupported rgxx")
+  let out = @dslx.pars(@dslx.rgxx("[a-z]+"), "[a-z]+")
+  inspect(out.tree is None, content="true")
+  inspect(out.digs[0].text, content="unsupported pattern")
+}
+
+///|
+test "validator reports undefined refx empty grammar and duplicates" {
+  let spec = @dslx.dslx("core")
+    .node(
+      @dslx.node("Expr")
+      .case(@dslx.case("Lit").fldx(@dslx.fldx("text", "String")))
+      .case(
+        @dslx.case("Lit")
+        .fldx(@dslx.fldx("text", "String"))
+        .fldx(@dslx.fldx("text", "String")),
+      ),
+    )
+    .node(@dslx.node("Expr"))
+    .rule(@dslx.rule("expr").body(@dslx.seqx([])))
+    .rule(@dslx.rule("expr").body(@dslx.altx([])))
+    .rule(@dslx.rule("decl").body(@dslx.refx("missing")))
+  let digs = @dslx.vspc(spec)
+  inspect(digs.length(), content="8")
+  inspect(digs[0].text, content="duplicate case name")
+  inspect(digs[1].text, content="duplicate field name")
+  inspect(digs[2].text, content="duplicate node name")
+  inspect(digs[4].text, content="empty seqx")
+  inspect(digs[5].text, content="duplicate rule name")
+  inspect(digs[6].text, content="empty altx")
+  inspect(digs[7].text, content="undefined refx")
+}
+
+///|
 test "parser reports failed literal" {
   let out = @dslx.pars(@dslx.litx("if"), "else")
   inspect(out.tree is None, content="true")
@@ -115,6 +172,28 @@ test "codegen returns virtual files" {
   inspect(
     @dslx.mods(out)[1].text,
     content="// generated pars for sql\npub fn expr(text : String) -> Pout { pars(litx(\"if\"), text) }\n",
+  )
+}
+
+///|
+test "codegen serializes rule expressions with refx" {
+  let out = @dslx.emit(
+    @dslx.dslx("core")
+    .rule(@dslx.rule("name").body(@dslx.rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+    .rule(
+      @dslx.rule("decl").body(
+        @dslx.seqx([@dslx.litx("let"), @dslx.refx("name")]),
+      ),
+    ),
+  )
+  inspect(
+    @dslx.mods(out)[1].text,
+    content=(
+      #|// generated pars for core
+      #|pub fn name(text : String) -> Pout { pars(rgxx("[a-zA-Z_][a-zA-Z0-9_]*"), text) }
+      #|pub fn decl(text : String) -> Pout { pars(seqx([litx("let"), refx("name")]), text) }
+      #|
+    ),
   )
 }
 
