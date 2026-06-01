@@ -77,6 +77,45 @@ test "runx resolves named rule references" {
 }
 
 ///|
+test "validation reports direct refx cycle" {
+  let spec = @dslx.dslx("core").rule(@dslx.rule("a").body(@dslx.refx("a")))
+  let digs = @dslx.vspc(spec)
+  inspect(digs.length(), content="2")
+  inspect(digs[1].text, content="refx cycle")
+  match digs[1].hint {
+    Some(value) => inspect(value, content="a -> a")
+    None => inspect("none", content="hint")
+  }
+}
+
+///|
+test "validation reports indirect refx cycle" {
+  let spec = @dslx.dslx("core")
+    .rule(@dslx.rule("a").body(@dslx.refx("b")))
+    .rule(@dslx.rule("b").body(@dslx.refx("a")))
+  let digs = @dslx.vspc(spec)
+  inspect(digs[1].text, content="refx cycle")
+  match digs[1].hint {
+    Some(value) => inspect(value, content="a -> b -> a")
+    None => inspect("none", content="hint")
+  }
+}
+
+///|
+test "runx fails refx cycle without recursion" {
+  let spec = @dslx.dslx("core")
+    .rule(@dslx.rule("a").body(@dslx.refx("b")))
+    .rule(@dslx.rule("b").body(@dslx.refx("a")))
+  let out = @dslx.runx(spec, "a", "")
+  inspect(out.tree is None, content="true")
+  inspect(out.digs[0].text, content="refx cycle")
+  match out.digs[0].hint {
+    Some(value) => inspect(value, content="a -> b -> a")
+    None => inspect("none", content="hint")
+  }
+}
+
+///|
 test "unsupported rgxx fails validation and parsing" {
   let spec = @dslx.dslx("core").rule(
     @dslx.rule("bad").body(@dslx.rgxx("[a-z]+")),
