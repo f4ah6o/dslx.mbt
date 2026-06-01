@@ -1,6 +1,6 @@
 # DSLX
 
-`dslx.mbt` is a small MoonBit meta-framework for describing DSLs with one compact builder surface. It keeps public API names to four characters so coding agents can generate calls consistently.
+`dslx.mbt` is a MoonBit meta-framework for describing DSLs with one compact builder surface. It keeps public API names to four characters so coding agents can generate calls consistently.
 
 ```mbt check
 ///|
@@ -15,7 +15,12 @@ test {
       @dslx.rule("expr").body(@dslx.altx([@dslx.tokn("name"), @dslx.litx("*")])),
     )
   inspect(@dslx.name(spec), content="sql")
-  inspect(@dslx.mods(@dslx.emit(spec)).length(), content="1")
+  inspect(@dslx.mods(@dslx.emit(spec)).length(), content="4")
+  let parsed = @dslx.pars(
+    @dslx.seqx([@dslx.litx("if"), @dslx.tokn("name")]),
+    "if user",
+  )
+  inspect(parsed.posx, content="7")
 }
 ```
 
@@ -31,9 +36,10 @@ The builder surface includes:
 - AST: `node`, `case`, `fldx`, `tree`, `span`
 - grammar: `rule`, `body`, `seqx`, `altx`, `many`, `optx`, `litx`, `tokn`, `rgxx`
 - Pratt parser: `prat`, `pref`, `infx`, `post`, `atom`
-- validation and diagnostics: `vald`, `chec`, `warn`, `fail`, `hint`, `diag`
+- parser: `pars`
+- validation and diagnostics: `vald`, `vspc`, `chec`, `warn`, `fail`, `hint`, `diag`
 - printing: `prnt`, `grup`, `line`, `join`, `nest`, `brkx`
 - codegen: `emit`, `file`, `mods`, `path`
 - examples: `rout`, `parm`, `bind`, `sqlx`, `slct`, `from`, `wher`, `ordr`, `limt`, `html`, `elem`, `attr`, `text`, `chid`, `mach`, `stat`, `tran`, `evnt`, method `init`, `tstx`, `givn`, `when`
 
-The v0 code generator returns virtual files only. It does not write to disk.
+The code generator returns virtual files only. It does not write to disk.

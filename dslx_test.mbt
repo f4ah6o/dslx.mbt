@@ -28,6 +28,44 @@ test "parser combinators are expression trees" {
 }
 
 ///|
+test "parser executes sequence with tokens and digits" {
+  let expr = @dslx.seqx([
+    @dslx.litx("if"),
+    @dslx.tokn("name"),
+    @dslx.rgxx("[0-9]+"),
+  ])
+  let out = @dslx.pars(expr, "if user_1 42")
+  inspect(out.posx, content="12")
+  inspect(out.digs.length(), content="0")
+  match out.tree {
+    Some(tree) => inspect(tree.kids.length(), content="3")
+    None => inspect("none", content="tree")
+  }
+}
+
+///|
+test "parser supports alternatives many and optional" {
+  let expr = @dslx.seqx([
+    @dslx.altx([@dslx.litx("let"), @dslx.litx("var")]),
+    @dslx.many(@dslx.rgxx("[0-9]+")),
+    @dslx.optx(@dslx.litx(";")),
+  ])
+  let out = @dslx.pars(expr, "var 1 22 ;")
+  inspect(out.posx, content="10")
+  match out.tree {
+    Some(tree) => inspect(tree.kids.length(), content="3")
+    None => inspect("none", content="tree")
+  }
+}
+
+///|
+test "parser reports failed literal" {
+  let out = @dslx.pars(@dslx.litx("if"), "else")
+  inspect(out.tree is None, content="true")
+  inspect(out.digs.length(), content="1")
+}
+
+///|
 test "pratt parser stores operator metadata" {
   let p = @dslx.prat()
     .pref("-", 90)
@@ -69,9 +107,22 @@ test "pretty printer renders nested docs" {
 
 ///|
 test "codegen returns virtual files" {
-  let out = @dslx.emit(@dslx.dslx("sql"))
-  inspect(@dslx.mods(out).length(), content="1")
-  inspect(@dslx.mods(out)[0].path, content="sql.mbt")
+  let out = @dslx.emit(
+    @dslx.dslx("sql").rule(@dslx.rule("expr").body(@dslx.litx("if"))),
+  )
+  inspect(@dslx.mods(out).length(), content="4")
+  inspect(@dslx.mods(out)[0].path, content="astx.mbt")
+  inspect(
+    @dslx.mods(out)[1].text,
+    content="// generated pars for sql\npub fn expr(text : String) -> Pout { pars(litx(\"if\"), text) }\n",
+  )
+}
+
+///|
+test "spec validation reports structural issues" {
+  let spec = @dslx.dslx("").node(@dslx.node("Expr")).rule(@dslx.rule("expr"))
+  let digs = @dslx.vspc(spec)
+  inspect(digs.length(), content="3")
 }
 
 ///|

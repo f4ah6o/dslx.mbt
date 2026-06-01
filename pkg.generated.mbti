@@ -76,6 +76,8 @@ pub fn ordr(String) -> String
 
 pub fn parm(String) -> String
 
+pub fn pars(Expr, String) -> Pout
+
 pub fn path(String) -> String
 
 pub fn prat() -> Prat
@@ -111,6 +113,8 @@ pub fn tree(String, String, kids? : Array[Tree], span? : Span) -> Tree
 pub fn tstx(String) -> Tstx
 
 pub fn vald(Tree) -> Vctx
+
+pub fn vspc(Dslx) -> Array[Diag]
 
 pub fn warn(String) -> Diag
 
@@ -213,6 +217,12 @@ pub(all) struct Oper {
   prec : Int
 } derive(Eq, @debug.Debug)
 
+pub(all) struct Pout {
+  tree : Tree?
+  posx : Int
+  digs : Array[Diag]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Prat {
   opsx : Array[Oper]
   atom : Expr
@@ -298,7 +308,7 @@ pub trait Emit {
 }
 
 pub trait Pars {
-  fn pars(Self, String) -> Tree?
+  fn pars(Self, String) -> Pout
 }
 
 pub trait Prnt {
