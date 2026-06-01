@@ -403,7 +403,6 @@ fn palt(items : Array[Expr], text : String, posx : Int) -> Pout {
 ///|
 fn pmny(item : Expr, text : String, posx : Int) -> Pout {
   let kids : Array[Tree] = []
-  let digs : Array[Diag] = []
   let mut posx = posx
   let mut keep = true
   while keep {
@@ -419,7 +418,7 @@ fn pmny(item : Expr, text : String, posx : Int) -> Pout {
       None => keep = false
     }
   }
-  { tree: Some(tree("many", "", kids~)), posx, digs }
+  { tree: Some(tree("many", "", kids~)), posx, digs: [] }
 }
 
 ///|
@@ -787,7 +786,10 @@ fn east(spec : Spec) -> String {
 fn eprs(spec : Spec) -> String {
   let mut out = "// generated pars for " + spec.name + "\n"
   for rule in spec.ruls {
-    out = out + "pub fn " + rule.name + "() -> Unit { () }\n"
+    out = out +
+      "pub fn " +
+      rule.name +
+      "(text : String) -> Pout { pars(atom(), text) }\n"
   }
   out
 }
