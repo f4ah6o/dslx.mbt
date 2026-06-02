@@ -435,6 +435,40 @@ test "project pack returns deterministic virtual files" {
 }
 
 ///|
+test "project lookup parse and example checks route through specs" {
+  let fwd_file = @dslx.file(
+    "examples/fwd.dsl", "schema User id:int name:text\n",
+  )
+  let flow_file = @dslx.file(
+    "examples/flow.dsl", "flow Build node Fetch Fetch -> Save",
+  )
+  let prj = @dslx.proj("family")
+    .exmp(fwd_file)
+    .exmp(flow_file)
+    .dslx(@dslx.fwds())
+    .dslx(@dslx.wflw())
+    .dslx(@dslx.domn())
+    .dslx(@dslx.n8nx())
+  match @dslx.fspc(prj, "Fwd") {
+    Some(spec) => inspect(@dslx.name(spec), content="Fwd")
+    None => inspect("none", content="Fwd")
+  }
+  inspect(@dslx.fspc(prj, "Missing") is None, content="true")
+  inspect(@dslx.runp(prj, "Fwd", "sche", fwd_file.text).done, content="true")
+  inspect(@dslx.runp(prj, "Wflw", "flow", flow_file.text).done, content="true")
+  inspect(@dslx.chex(prj, "Fwd", "sche", fwd_file).length(), content="0")
+  let missing = @dslx.runp(prj, "Missing", "sche", fwd_file.text)
+  inspect(missing.done, content="false")
+  inspect(missing.digs[0].text, content="unknown project spec")
+  match missing.digs[0].hint {
+    Some(value) => inspect(value, content="Missing")
+    None => inspect("none", content="hint")
+  }
+  let bad = @dslx.chex(prj, "Fwd", "sche", @dslx.file("bad.dsl", "not schema"))
+  inspect(bad.length() > 0, content="true")
+}
+
+///|
 test "project validation reports duplicate specs and virtual paths" {
   let prj = @dslx.proj("family")
     .file(@dslx.file("dup.mbt", "a"))
