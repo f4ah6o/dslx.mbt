@@ -26,6 +26,8 @@ pub fn chid(Html) -> Html
 
 pub fn diag(String, String) -> Diag
 
+pub fn domn() -> Dslx
+
 pub fn dslx(String) -> Dslx
 
 pub fn elem(String) -> String
@@ -41,6 +43,8 @@ pub fn file(String, String) -> File
 pub fn fldx(String, String) -> Fldx
 
 pub fn from(Array[String]) -> Array[String]
+
+pub fn fwds() -> Dslx
 
 pub fn givn(String) -> String
 
@@ -64,6 +68,8 @@ pub fn many(Expr) -> Expr
 
 pub fn mods(Emix) -> Array[File]
 
+pub fn n8nx() -> Dslx
+
 pub fn name(Dslx) -> String
 
 pub fn nest(Int, Docx) -> Docx
@@ -74,6 +80,8 @@ pub fn optx(Expr) -> Expr
 
 pub fn ordr(String) -> String
 
+pub fn pack(Proj) -> Array[File]
+
 pub fn parm(String) -> String
 
 pub fn pars(Expr, String) -> Pout
@@ -83,6 +91,8 @@ pub fn path(String) -> String
 pub fn prat() -> Prat
 
 pub fn prnt(Docx) -> String
+
+pub fn proj(String) -> Proj
 
 pub fn refx(String) -> Expr
 
@@ -118,9 +128,13 @@ pub fn tstx(String) -> Tstx
 
 pub fn vald(Tree) -> Vctx
 
+pub fn vprj(Proj) -> Array[Diag]
+
 pub fn vspc(Dslx) -> Array[Diag]
 
 pub fn warn(String) -> Diag
+
+pub fn wflw() -> Dslx
 
 pub fn when(String) -> String
 
@@ -237,6 +251,16 @@ pub fn Prat::atom(Self, Expr) -> Self
 pub fn Prat::infx(Self, String, Int) -> Self
 pub fn Prat::post(Self, String, Int) -> Self
 pub fn Prat::pref(Self, String, Int) -> Self
+
+pub(all) struct Proj {
+  name : String
+  dslx : Array[Dslx]
+  exmp : Array[File]
+  mods : Array[File]
+} derive(Eq, @debug.Debug)
+pub fn Proj::dslx(Self, Dslx) -> Self
+pub fn Proj::exmp(Self, File) -> Self
+pub fn Proj::file(Self, File) -> Self
 
 pub(all) struct Rout {
   segs : Array[String]

@@ -280,6 +280,102 @@ pub fn Tstx::chec(self : Tstx, text : String) -> Tstx {
 }
 
 ///|
+pub fn fwds() -> Dslx {
+  dslx("Fwd")
+  .node(
+    node("Sche")
+    .case(
+      case("Root")
+      .fldx(fldx("name", "String"))
+      .fldx(fldx("cols", "Array[String]")),
+    )
+    .case(
+      case("Colu").fldx(fldx("name", "String")).fldx(fldx("typx", "String")),
+    ),
+  )
+  .rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+  .rule(rule("typx").body(altx([litx("text"), litx("int"), litx("bool")])))
+  .rule(rule("colu").body(seqx([refx("name"), litx(":"), refx("typx")])))
+  .rule(
+    rule("sche").body(seqx([litx("schema"), refx("name"), many(refx("colu"))])),
+  )
+}
+
+///|
+pub fn wflw() -> Dslx {
+  dslx("Wflw")
+  .node(
+    node("Flow")
+    .case(case("Node").fldx(fldx("name", "String")))
+    .case(
+      case("Edge").fldx(fldx("from", "String")).fldx(fldx("upto", "String")),
+    ),
+  )
+  .rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+  .rule(rule("node").body(seqx([litx("node"), refx("name")])))
+  .rule(rule("edge").body(seqx([refx("name"), litx("->"), refx("name")])))
+  .rule(
+    rule("flow").body(
+      seqx([
+        litx("flow"),
+        refx("name"),
+        many(altx([refx("node"), refx("edge")])),
+      ]),
+    ),
+  )
+}
+
+///|
+pub fn domn() -> Dslx {
+  dslx("Domn")
+  .node(
+    node("Domn")
+    .case(case("Enty").fldx(fldx("name", "String")))
+    .case(case("Proc").fldx(fldx("name", "String"))),
+  )
+  .rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+  .rule(rule("enty").body(seqx([litx("entity"), refx("name")])))
+  .rule(
+    rule("proc").body(seqx([litx("process"), refx("name"), many(refx("name"))])),
+  )
+  .rule(
+    rule("domn").body(
+      seqx([
+        litx("domain"),
+        refx("name"),
+        many(altx([refx("enty"), refx("proc")])),
+      ]),
+    ),
+  )
+}
+
+///|
+pub fn n8nx() -> Dslx {
+  dslx("N8nx")
+  .node(
+    node("N8nw")
+    .case(
+      case("Step").fldx(fldx("name", "String")).fldx(fldx("kind", "String")),
+    )
+    .case(
+      case("Wire").fldx(fldx("from", "String")).fldx(fldx("upto", "String")),
+    ),
+  )
+  .rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+  .rule(rule("step").body(seqx([litx("step"), refx("name"), refx("name")])))
+  .rule(rule("wire").body(seqx([refx("name"), litx("=>"), refx("name")])))
+  .rule(
+    rule("n8nw").body(
+      seqx([
+        litx("workflow"),
+        refx("name"),
+        many(altx([refx("step"), refx("wire")])),
+      ]),
+    ),
+  )
+}
+
+///|
 pub fn givn(text : String) -> String {
   text
 }

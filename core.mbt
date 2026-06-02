@@ -88,6 +88,14 @@ pub(all) struct File {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct Proj {
+  name : String
+  dslx : Array[Dslx]
+  exmp : Array[File]
+  mods : Array[File]
+} derive(Debug, Eq)
+
+///|
 pub(all) struct Emix {
   spec : Spec
   mods : Array[File]
@@ -188,6 +196,11 @@ pub fn spec(name : String) -> Spec {
 ///|
 pub fn dslx(name : String) -> Dslx {
   { spec: spec(name) }
+}
+
+///|
+pub fn proj(name : String) -> Proj {
+  { name, dslx: [], exmp: [], mods: [] }
 }
 
 ///|
