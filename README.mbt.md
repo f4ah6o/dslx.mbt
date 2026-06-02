@@ -33,13 +33,31 @@ test {
 
 MoonBit uses `test` as syntax, so the test DSL entrypoint is exported as `tstx`.
 
+`Proj` is the small project layer for grouping related specs, examples, and extra virtual files. `pack` is deterministic and only returns virtual files; it never writes to disk.
+
+```mbt check
+///|
+test {
+  let prj = @dslx.proj("family")
+    .file(@dslx.file("README.md", "# family\n"))
+    .exmp(@dslx.file("examples/fwd.dsl", "schema User id:int\n"))
+    .dslx(@dslx.fwds())
+    .dslx(@dslx.wflw())
+  let files = @dslx.pack(prj)
+  inspect(files[0].path, content="README.md")
+  inspect(files[1].path, content="examples/fwd.dsl")
+  inspect(files[2].path, content="Fwd/astx.mbt")
+  inspect(@dslx.vprj(prj).length(), content="0")
+}
+```
+
 ## Public API
 
-The main objects are `Dslx`, `Spec`, `Node`, `Rule`, `Tree`, and `Diag`. The public traits are `Pars`, `Vald`, `Prnt`, and `Emit`.
+The main objects are `Dslx`, `Spec`, `Proj`, `Node`, `Rule`, `Tree`, and `Diag`. The public traits are `Pars`, `Vald`, `Prnt`, and `Emit`.
 
 The builder surface includes:
 
-- core: `dslx`, `spec`, `name`
+- core: `dslx`, `spec`, `proj`, `name`
 - AST: `node`, `case`, `fldx`, `tree`, `span`
 - grammar: `rule`, `body`, `seqx`, `altx`, `many`, `optx`, `litx`, `tokn`, `rgxx`, `refx`
 - Pratt parser: `prat`, `pref`, `infx`, `post`, `atom`
@@ -47,7 +65,8 @@ The builder surface includes:
 - validation and diagnostics: `vald`, `vspc`, `chec`, `warn`, `fail`, `hint`, `diag`
 - printing: `prnt`, `grup`, `line`, `join`, `nest`, `brkx`
 - codegen: `emit`, `file`, `mods`, `path`
-- examples: `rout`, `parm`, `bind`, `sqlx`, `slct`, `from`, `wher`, `ordr`, `limt`, `html`, `elem`, `attr`, `text`, `chid`, `mach`, `stat`, `tran`, `evnt`, method `init`, `tstx`, `givn`, `when`
+- project: `pack`, `vprj`, methods `dslx`, `exmp`, `file`
+- examples: `fwds`, `wflw`, `domn`, `n8nx`, `rout`, `parm`, `bind`, `sqlx`, `slct`, `from`, `wher`, `ordr`, `limt`, `html`, `elem`, `attr`, `text`, `chid`, `mach`, `stat`, `tran`, `evnt`, method `init`, `tstx`, `givn`, `when`
 
 The code generator returns virtual files only. It does not write to disk.
 
@@ -68,3 +87,5 @@ Parse diagnostics include span information for literal, token, `rgxx`, `refx`, s
 Parser combinator diagnostics are conservative: `altx` discards failed earlier branches once a later branch succeeds, `many` stops on the first failed child parse without surfacing that child diagnostic, and `optx` succeeds with an empty tree when its child fails.
 
 `vspc` validates empty names, generated-name readiness, duplicate node/case/field/rule names, undefined `refx`, unsupported `rgxx`, and empty `seqx`/`altx`. Generated-name readiness rejects spec, node, case, field, and rule names that are not MoonBit identifiers: the first byte must be an ASCII letter or `_`, later bytes must be ASCII letters, digits, or `_`, and reserved words are not accepted. Diagnostics remain `Diag` values with `kind` set to `fail` or `warn` plus short hints where useful.
+
+`pack(proj)` keeps file order stable: explicit project files, example files, then generated files for each `Dslx` in insertion order. Generated files are namespaced as `<SpecName>/astx.mbt`, `<SpecName>/pars.mbt`, `<SpecName>/vald.mbt`, and `<SpecName>/prnt.mbt`, which lets multiple DSL specs coexist in one virtual project package. `vprj` combines spec validation with duplicate spec-name and duplicate virtual-path diagnostics.

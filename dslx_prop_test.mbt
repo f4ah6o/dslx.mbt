@@ -412,3 +412,55 @@ test "quickcheck emit file order parser wrappers and escaping stay stable" {
     guard pars == expected else { panic() }
   }
 }
+
+///|
+test "quickcheck project pack order and generated parser stay stable" {
+  let seeds : Array[Int] = @quickcheck.samples(180)
+  for seed in seeds {
+    let suffix = valid_ident(seed)
+    let rule = "main" + suffix
+    let prj = @dslx.proj("Proj" + suffix)
+      .file(@dslx.file("moon.pkg", "{}\n"))
+      .exmp(@dslx.file("examples/" + suffix + ".dsl", "ok"))
+      .dslx(
+        @dslx.dslx("Spec" + suffix)
+        .rule(@dslx.rule(rule).body(@dslx.refx("name")))
+        .rule(@dslx.rule("name").body(@dslx.rgxx("[a-zA-Z_][a-zA-Z0-9_]*"))),
+      )
+    let once = @dslx.pack(prj)
+    let twice = @dslx.pack(prj)
+    guard once == twice else { panic() }
+    guard once.length() == 6 else { panic() }
+    guard once[0].path == "moon.pkg" else { panic() }
+    guard once[1].path == "examples/" + suffix + ".dsl" else { panic() }
+    guard once[2].path == "Spec" + suffix + "/astx.mbt" else { panic() }
+    guard once[3].path == "Spec" + suffix + "/pars.mbt" else { panic() }
+    guard once[3].text.contains("runx(generated_spec(), \"" + rule + "\"") else {
+      panic()
+    }
+    guard @dslx.runx(prj.dslx[0], rule, suffix).done else { panic() }
+  }
+}
+
+///|
+test "quickcheck project duplicate diagnostics stay stable" {
+  let seeds : Array[Int] = @quickcheck.samples(120)
+  for seed in seeds {
+    let suffix = valid_ident(seed)
+    let spec = "Spec" + suffix
+    let path = "out/" + suffix + ".mbt"
+    let prj = @dslx.proj("Proj" + suffix)
+      .file(@dslx.file(path, "a"))
+      .exmp(@dslx.file(path, "b"))
+      .dslx(@dslx.dslx(spec).rule(@dslx.rule("main").body(@dslx.litx("x"))))
+      .dslx(@dslx.dslx(spec).rule(@dslx.rule("other").body(@dslx.litx("y"))))
+    let digs = @dslx.vprj(prj)
+    guard count_diag(digs, "duplicate spec name") == 1 else { panic() }
+    guard count_diag(digs, "duplicate file path") == 5 else { panic() }
+    guard has_diag(digs, "duplicate spec name", spec) else { panic() }
+    guard has_diag(digs, "duplicate file path", path) else { panic() }
+    guard has_diag(digs, "duplicate file path", spec + "/pars.mbt") else {
+      panic()
+    }
+  }
+}

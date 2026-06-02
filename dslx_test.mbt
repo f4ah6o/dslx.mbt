@@ -415,3 +415,65 @@ test "test dsl uses tstx alias" {
   inspect(item.chec.length(), content="1")
   inspect(item.givn.length(), content="1")
 }
+
+///|
+test "project pack returns deterministic virtual files" {
+  let prj = @dslx.proj("family")
+    .file(@dslx.file("README.md", "# family\n"))
+    .exmp(@dslx.file("examples/fwd.dsl", "schema User id:int\n"))
+    .dslx(@dslx.dslx("Tiny").rule(@dslx.rule("main").body(@dslx.litx("ok"))))
+  let files = @dslx.pack(prj)
+  inspect(files.length(), content="6")
+  inspect(files[0].path, content="README.md")
+  inspect(files[1].path, content="examples/fwd.dsl")
+  inspect(files[2].path, content="Tiny/astx.mbt")
+  inspect(files[3].path, content="Tiny/pars.mbt")
+  inspect(files[4].path, content="Tiny/vald.mbt")
+  inspect(files[5].path, content="Tiny/prnt.mbt")
+  let again = @dslx.pack(prj)
+  inspect(again == files, content="true")
+}
+
+///|
+test "project validation reports duplicate specs and virtual paths" {
+  let prj = @dslx.proj("family")
+    .file(@dslx.file("dup.mbt", "a"))
+    .exmp(@dslx.file("dup.mbt", "b"))
+    .dslx(@dslx.dslx("Same").rule(@dslx.rule("main").body(@dslx.litx("x"))))
+    .dslx(@dslx.dslx("Same").rule(@dslx.rule("main").body(@dslx.litx("y"))))
+  let digs = @dslx.vprj(prj)
+  inspect(count_diag(digs, "duplicate spec name"), content="1")
+  inspect(count_diag(digs, "duplicate file path"), content="5")
+  match digs[digs.length() - 5].hint {
+    Some(value) => inspect(value, content="dup.mbt")
+    None => inspect("none", content="hint")
+  }
+}
+
+///|
+test "family example specs validate and parse their roots" {
+  let fwd = @dslx.fwds()
+  let flow = @dslx.wflw()
+  let domn = @dslx.domn()
+  let n8n = @dslx.n8nx()
+  inspect(@dslx.vspc(fwd).length(), content="0")
+  inspect(@dslx.vspc(flow).length(), content="0")
+  inspect(@dslx.vspc(domn).length(), content="0")
+  inspect(@dslx.vspc(n8n).length(), content="0")
+  inspect(
+    @dslx.runx(fwd, "sche", "schema User id:int name:text").done,
+    content="true",
+  )
+  inspect(
+    @dslx.runx(flow, "flow", "flow Build node Fetch Fetch -> Save").done,
+    content="true",
+  )
+  inspect(
+    @dslx.runx(domn, "domn", "domain Sales entity Order process Ship Order").done,
+    content="true",
+  )
+  inspect(
+    @dslx.runx(n8n, "n8nw", "workflow Sync step Pull http Pull => Push").done,
+    content="true",
+  )
+}
