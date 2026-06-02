@@ -59,10 +59,12 @@ The code generator returns virtual files only. It does not write to disk.
 
 `runx` looks up the start rule by name, then resolves `refx("name")` against the spec rules. It uses the same strict final-consumption rule as `pars`. Missing start rules or missing references produce `fail` diagnostics with spans. Successful `refx` parses keep a wrapper tree named `refx:<name>` around the referenced rule tree.
 
+Generated `pars.mbt` rule functions rebuild a private generated spec and call `runx(generated_spec(), "<rule>", text)`. This means generated parser entrypoints resolve `refx` exactly like hand-written `runx` calls while still returning virtual files only.
+
 `rgxx` intentionally supports only explicit scanner patterns in Core v1: `[0-9]+` and `[a-zA-Z_][a-zA-Z0-9_]*`. Unsupported patterns fail validation and fail parsing instead of being treated as literal prefixes.
 
 Parse diagnostics include span information for literal, token, `rgxx`, `refx`, start-rule, and `refx` cycle failures. When there is no wider source range, the parser uses a zero-width span at the current byte offset.
 
 Parser combinator diagnostics are conservative: `altx` discards failed earlier branches once a later branch succeeds, `many` stops on the first failed child parse without surfacing that child diagnostic, and `optx` succeeds with an empty tree when its child fails.
 
-`vspc` validates empty names, duplicate node/case/field/rule names, undefined `refx`, unsupported `rgxx`, and empty `seqx`/`altx`. Diagnostics remain `Diag` values with `kind` set to `fail` or `warn` plus short hints where useful.
+`vspc` validates empty names, generated-name readiness, duplicate node/case/field/rule names, undefined `refx`, unsupported `rgxx`, and empty `seqx`/`altx`. Generated-name readiness rejects spec, node, case, field, and rule names that are not MoonBit identifiers: the first byte must be an ASCII letter or `_`, later bytes must be ASCII letters, digits, or `_`, and reserved words are not accepted. Diagnostics remain `Diag` values with `kind` set to `fail` or `warn` plus short hints where useful.

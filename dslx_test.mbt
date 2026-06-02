@@ -287,7 +287,14 @@ test "codegen returns virtual files" {
   inspect(@dslx.mods(out)[0].path, content="astx.mbt")
   inspect(
     @dslx.mods(out)[1].text,
-    content="// generated pars for sql\npub fn expr(text : String) -> Pout { pars(litx(\"if\"), text) }\n",
+    content=(
+      #|// generated pars for sql
+      #|fn generated_spec() -> Dslx {
+      #|  dslx("sql").rule(rule("expr").body(litx("if")))
+      #|}
+      #|pub fn expr(text : String) -> Pout { runx(generated_spec(), "expr", text) }
+      #|
+    ),
   )
 }
 
@@ -306,11 +313,65 @@ test "codegen serializes rule expressions with refx" {
     @dslx.mods(out)[1].text,
     content=(
       #|// generated pars for core
-      #|pub fn name(text : String) -> Pout { pars(rgxx("[a-zA-Z_][a-zA-Z0-9_]*"), text) }
-      #|pub fn decl(text : String) -> Pout { pars(seqx([litx("let"), refx("name")]), text) }
+      #|fn generated_spec() -> Dslx {
+      #|  dslx("core").rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*"))).rule(rule("decl").body(seqx([litx("let"), refx("name")])))
+      #|}
+      #|pub fn name(text : String) -> Pout { runx(generated_spec(), "name", text) }
+      #|pub fn decl(text : String) -> Pout { runx(generated_spec(), "decl", text) }
       #|
     ),
   )
+}
+
+///|
+test "codegen serializes generated spec with ast nodes" {
+  let out = @dslx.emit(
+    @dslx.dslx("core")
+    .node(
+      @dslx.node("Expr").case(
+        @dslx.case("Lit").fldx(@dslx.fldx("text", "String")),
+      ),
+    )
+    .rule(@dslx.rule("expr").body(@dslx.tokn("name"))),
+  )
+  inspect(
+    @dslx.mods(out)[1].text,
+    content=(
+      #|// generated pars for core
+      #|fn generated_spec() -> Dslx {
+      #|  dslx("core").node(node("Expr").case(case("Lit").fldx(fldx("text", "String")))).rule(rule("expr").body(tokn("name")))
+      #|}
+      #|pub fn expr(text : String) -> Pout { runx(generated_spec(), "expr", text) }
+      #|
+    ),
+  )
+}
+
+///|
+test "validation rejects names that generated MoonBit cannot emit" {
+  let spec = @dslx.dslx("bad-name")
+    .node(
+      @dslx.node("1Expr").case(
+        @dslx.case("Bad-Case").fldx(@dslx.fldx("field name", "String")),
+      ),
+    )
+    .rule(@dslx.rule("let-name").body(@dslx.litx("x")))
+    .rule(@dslx.rule("let").body(@dslx.litx("y")))
+  let digs = @dslx.vspc(spec)
+  inspect(digs.length(), content="6")
+  inspect(digs[0].text, content="invalid generated name")
+  match digs[0].hint {
+    Some(value) => inspect(value, content="spec:bad-name")
+    None => inspect("none", content="hint")
+  }
+  match digs[4].hint {
+    Some(value) => inspect(value, content="rule:let-name")
+    None => inspect("none", content="hint")
+  }
+  match digs[5].hint {
+    Some(value) => inspect(value, content="rule:let")
+    None => inspect("none", content="hint")
+  }
 }
 
 ///|
