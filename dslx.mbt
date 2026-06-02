@@ -14,6 +14,7 @@ pub(all) enum Expr {
   Litx(String)
   Tokn(String)
   Rgxx(String)
+  Refx(String)
   Atom
 } derive(Debug, Eq)
 
@@ -330,22 +331,70 @@ pub fn rgxx(text : String) -> Expr {
 }
 
 ///|
+pub fn refx(text : String) -> Expr {
+  Refx(text)
+}
+
+///|
 pub fn pars(expr : Expr, text : String) -> Pout {
   pexp(expr, text, 0)
 }
 
 ///|
+pub fn runx(spec : Dslx, rule : String, text : String) -> Pout {
+  match frul(spec.spec.ruls, rule) {
+    Some(expr) => pexs(expr, spec.spec.ruls, [rule], text, 0)
+    None =>
+      { tree: None, posx: 0, digs: [fail("unknown start rule").hint(rule)] }
+  }
+}
+
+///|
 fn pexp(expr : Expr, text : String, posx : Int) -> Pout {
+  pexs(expr, [], [], text, posx)
+}
+
+///|
+fn pexs(
+  expr : Expr,
+  rules : Array[Rule],
+  stkx : Array[String],
+  text : String,
+  posx : Int,
+) -> Pout {
   let posx = sksp(text, posx)
   match expr {
     Litx(value) => plit(value, text, posx)
     Tokn(name) => ptok(name, text, posx)
     Rgxx(patt) => preg(patt, text, posx)
-    Seqx(items) => pseq(items, text, posx)
-    Altx(items) => palt(items, text, posx)
-    Many(item) => pmny(item, text, posx)
+    Refx(name) =>
+      if hasx(stkx, name) {
+        { tree: None, posx, digs: [fail("refx cycle").hint(ptxt(stkx, name))] }
+      } else {
+        match frul(rules, name) {
+          Some(item) => {
+            let next = stkx.copy()
+            next.push(name)
+            let out = pexs(item, rules, next, text, posx)
+            match out.tree {
+              Some(node) =>
+                {
+                  tree: Some(tree("refx:" + name, "", kids=[node])),
+                  posx: out.posx,
+                  digs: out.digs,
+                }
+              None => out
+            }
+          }
+          None =>
+            { tree: None, posx, digs: [fail("undefined rule").hint(name)] }
+        }
+      }
+    Seqx(items) => pseq(items, rules, stkx, text, posx)
+    Altx(items) => palt(items, rules, stkx, text, posx)
+    Many(item) => pmny(item, rules, stkx, text, posx)
     Optx(item) => {
-      let out = pexp(item, text, posx)
+      let out = pexs(item, rules, stkx, text, posx)
       match out.tree {
         Some(_) => out
         None => { tree: Some(tree("optx", "", kids=[])), posx, digs: [] }
@@ -356,12 +405,18 @@ fn pexp(expr : Expr, text : String, posx : Int) -> Pout {
 }
 
 ///|
-fn pseq(items : Array[Expr], text : String, posx : Int) -> Pout {
+fn pseq(
+  items : Array[Expr],
+  rules : Array[Rule],
+  stkx : Array[String],
+  text : String,
+  posx : Int,
+) -> Pout {
   let kids : Array[Tree] = []
   let digs : Array[Diag] = []
   let mut posx = posx
   for item in items {
-    let out = pexp(item, text, posx)
+    let out = pexs(item, rules, stkx, text, posx)
     for diag in out.digs {
       digs.push(diag)
     }
@@ -377,14 +432,19 @@ fn pseq(items : Array[Expr], text : String, posx : Int) -> Pout {
 }
 
 ///|
-fn palt(items : Array[Expr], text : String, posx : Int) -> Pout {
+fn palt(
+  items : Array[Expr],
+  rules : Array[Rule],
+  stkx : Array[String],
+  text : String,
+  posx : Int,
+) -> Pout {
   let digs : Array[Diag] = []
   for item in items {
-    let out = pexp(item, text, posx)
+    let out = pexs(item, rules, stkx, text, posx)
     match out.tree {
       Some(node) =>
-        // Earlier failed alternatives are intentionally discarded once a later
-        // branch matches, so callers only see diagnostics for the chosen parse.
+        // Earlier failed alternatives are intentionally discarded once a later branch matches.
         return {
           tree: Some(tree("altx", "", kids=[node])),
           posx: out.posx,
@@ -401,12 +461,18 @@ fn palt(items : Array[Expr], text : String, posx : Int) -> Pout {
 }
 
 ///|
-fn pmny(item : Expr, text : String, posx : Int) -> Pout {
+fn pmny(
+  item : Expr,
+  rules : Array[Rule],
+  stkx : Array[String],
+  text : String,
+  posx : Int,
+) -> Pout {
   let kids : Array[Tree] = []
   let mut posx = posx
   let mut keep = true
   while keep {
-    let out = pexp(item, text, posx)
+    let out = pexs(item, rules, stkx, text, posx)
     match out.tree {
       Some(tree) =>
         if out.posx == posx {
@@ -455,12 +521,15 @@ fn ptok(name : String, text : String, posx : Int) -> Pout {
 
 ///|
 fn preg(patt : String, text : String, posx : Int) -> Pout {
-  // DSLX v0.2 keeps rgxx lightweight: two common token patterns get scanner
-  // support, and other patterns are treated as literal prefixes.
   let endx = match patt {
     "[0-9]+" => scan(text, posx, false)
     "[a-zA-Z_][a-zA-Z0-9_]*" => scan(text, posx, true)
-    _ => if pref(text, posx, patt) { posx + patt.length() } else { posx }
+    _ =>
+      return {
+        tree: None,
+        posx,
+        digs: [fail("unsupported pattern").hint(patt)],
+      }
   }
   if endx > posx {
     let value = text.view(start_offset=posx, end_offset=endx).to_owned()
@@ -472,6 +541,16 @@ fn preg(patt : String, text : String, posx : Int) -> Pout {
   } else {
     { tree: None, posx, digs: [fail("expected pattern").hint(patt)] }
   }
+}
+
+///|
+fn frul(rules : Array[Rule], name : String) -> Expr? {
+  for rule in rules {
+    if rule.name == name {
+      return Some(rule.expr)
+    }
+  }
+  None
 }
 
 ///|
@@ -614,31 +693,155 @@ pub fn vspc(value : Dslx) -> Array[Diag] {
   if spec.ruls.length() == 0 {
     digs.push(warn("spec has no rule"))
   }
+  let nodn : Array[String] = []
   for node in spec.nods {
     if node.name.length() == 0 {
       digs.push(fail("empty node name"))
     }
+    if hasx(nodn, node.name) {
+      digs.push(fail("duplicate node name").hint(node.name))
+    }
+    nodn.push(node.name)
     if node.casx.length() == 0 {
       digs.push(warn("node has no case").hint(node.name))
     }
+    let casn : Array[String] = []
     for item in node.casx {
       if item.name.length() == 0 {
         digs.push(fail("empty case name").hint(node.name))
       }
+      if hasx(casn, item.name) {
+        digs.push(fail("duplicate case name").hint(node.name + "." + item.name))
+      }
+      casn.push(item.name)
       if item.flds.length() == 0 {
         digs.push(warn("case has no field").hint(item.name))
       }
+      let fldn : Array[String] = []
+      for fld in item.flds {
+        if fld.name.length() == 0 {
+          digs.push(fail("empty field name").hint(item.name))
+        }
+        if hasx(fldn, fld.name) {
+          digs.push(
+            fail("duplicate field name").hint(item.name + "." + fld.name),
+          )
+        }
+        fldn.push(fld.name)
+      }
     }
   }
+  let ruln : Array[String] = []
   for rule in spec.ruls {
     if rule.name.length() == 0 {
       digs.push(fail("empty rule name"))
     }
+    if hasx(ruln, rule.name) {
+      digs.push(fail("duplicate rule name").hint(rule.name))
+    }
+    ruln.push(rule.name)
     if rule.expr is Atom {
       digs.push(warn("rule has no body").hint(rule.name))
     }
+    vexx(rule.expr, spec.ruls, digs)
+    cyrx(rule.expr, spec.ruls, [rule.name], digs)
   }
   digs
+}
+
+///|
+fn vexx(expr : Expr, rules : Array[Rule], digs : Array[Diag]) -> Unit {
+  match expr {
+    Seqx(items) => {
+      if items.length() == 0 {
+        digs.push(fail("empty seqx").hint("add at least one expression"))
+      }
+      for item in items {
+        vexx(item, rules, digs)
+      }
+    }
+    Altx(items) => {
+      if items.length() == 0 {
+        digs.push(fail("empty altx").hint("add at least one alternative"))
+      }
+      for item in items {
+        vexx(item, rules, digs)
+      }
+    }
+    Many(item) => vexx(item, rules, digs)
+    Optx(item) => vexx(item, rules, digs)
+    Rgxx(patt) =>
+      if !sprg(patt) {
+        digs.push(fail("unsupported rgxx").hint(patt))
+      }
+    Refx(name) =>
+      if name.length() == 0 {
+        digs.push(fail("empty refx name"))
+      } else if frul(rules, name) is None {
+        digs.push(fail("undefined refx").hint(name))
+      }
+    Litx(_) | Tokn(_) | Atom => ()
+  }
+}
+
+///|
+fn sprg(patt : String) -> Bool {
+  patt == "[0-9]+" || patt == "[a-zA-Z_][a-zA-Z0-9_]*"
+}
+
+///|
+fn cyrx(
+  expr : Expr,
+  rules : Array[Rule],
+  stkx : Array[String],
+  digs : Array[Diag],
+) -> Unit {
+  match expr {
+    Seqx(items) | Altx(items) =>
+      for item in items {
+        cyrx(item, rules, stkx, digs)
+      }
+    Many(item) | Optx(item) => cyrx(item, rules, stkx, digs)
+    Refx(name) =>
+      if hasx(stkx, name) {
+        digs.push(fail("refx cycle").hint(ptxt(stkx, name)))
+      } else {
+        match frul(rules, name) {
+          Some(item) => {
+            let next = stkx.copy()
+            next.push(name)
+            cyrx(item, rules, next, digs)
+          }
+          None => ()
+        }
+      }
+    Litx(_) | Tokn(_) | Rgxx(_) | Atom => ()
+  }
+}
+
+///|
+fn hasx(items : Array[String], name : String) -> Bool {
+  for item in items {
+    if item == name {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn ptxt(stkx : Array[String], name : String) -> String {
+  let mut out = ""
+  for item in stkx {
+    if out.length() > 0 {
+      out = out + " -> "
+    }
+    out = out + item
+  }
+  if out.length() > 0 {
+    out = out + " -> "
+  }
+  out + name
 }
 
 ///|
@@ -808,6 +1011,7 @@ fn sexp(expr : Expr) -> String {
     Litx(text) => "litx(" + qstr(text) + ")"
     Tokn(name) => "tokn(" + qstr(name) + ")"
     Rgxx(patt) => "rgxx(" + qstr(patt) + ")"
+    Refx(name) => "refx(" + qstr(name) + ")"
     Atom => "atom()"
   }
 }
