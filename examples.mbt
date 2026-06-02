@@ -1,0 +1,290 @@
+///|
+pub fn Rout::litx(self : Rout, text : String) -> Rout {
+  let segs = self.segs.copy()
+  segs.push("litx:" + text)
+  { segs, }
+}
+
+///|
+pub fn Rout::parm(self : Rout, name : String) -> Rout {
+  let segs = self.segs.copy()
+  segs.push("parm:" + name)
+  { segs, }
+}
+
+///|
+pub fn Rout::bind(self : Rout, name : String) -> Rout {
+  let segs = self.segs.copy()
+  segs.push("bind:" + name)
+  { segs, }
+}
+
+///|
+pub fn rout() -> Rout {
+  { segs: [] }
+}
+
+///|
+pub fn parm(text : String) -> String {
+  text
+}
+
+///|
+pub fn bind(text : String) -> String {
+  text
+}
+
+///|
+pub fn sqlx() -> Sqlx {
+  { cols: [], from: [], wher: None, join: [], grup: [], ordr: [], limt: None }
+}
+
+///|
+pub fn Sqlx::slct(self : Sqlx, cols : Array[String]) -> Sqlx {
+  {
+    cols,
+    from: self.from,
+    wher: self.wher,
+    join: self.join,
+    grup: self.grup,
+    ordr: self.ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::from(self : Sqlx, tbls : Array[String]) -> Sqlx {
+  {
+    cols: self.cols,
+    from: tbls,
+    wher: self.wher,
+    join: self.join,
+    grup: self.grup,
+    ordr: self.ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::wher(self : Sqlx, cond : String) -> Sqlx {
+  {
+    cols: self.cols,
+    from: self.from,
+    wher: Some(cond),
+    join: self.join,
+    grup: self.grup,
+    ordr: self.ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::join(self : Sqlx, tbl : String) -> Sqlx {
+  let join = self.join.copy()
+  join.push(tbl)
+  {
+    cols: self.cols,
+    from: self.from,
+    wher: self.wher,
+    join,
+    grup: self.grup,
+    ordr: self.ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::grup(self : Sqlx, col : String) -> Sqlx {
+  let grup = self.grup.copy()
+  grup.push(col)
+  {
+    cols: self.cols,
+    from: self.from,
+    wher: self.wher,
+    join: self.join,
+    grup,
+    ordr: self.ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::ordr(self : Sqlx, col : String) -> Sqlx {
+  let ordr = self.ordr.copy()
+  ordr.push(col)
+  {
+    cols: self.cols,
+    from: self.from,
+    wher: self.wher,
+    join: self.join,
+    grup: self.grup,
+    ordr,
+    limt: self.limt,
+  }
+}
+
+///|
+pub fn Sqlx::limt(self : Sqlx, limt : Int) -> Sqlx {
+  {
+    cols: self.cols,
+    from: self.from,
+    wher: self.wher,
+    join: self.join,
+    grup: self.grup,
+    ordr: self.ordr,
+    limt: Some(limt),
+  }
+}
+
+///|
+pub fn slct(cols : Array[String]) -> Array[String] {
+  cols
+}
+
+///|
+pub fn from(tbls : Array[String]) -> Array[String] {
+  tbls
+}
+
+///|
+pub fn wher(cond : String) -> String {
+  cond
+}
+
+///|
+pub fn ordr(col : String) -> String {
+  col
+}
+
+///|
+pub fn limt(n : Int) -> Int {
+  n
+}
+
+///|
+pub fn html() -> Html {
+  { name: "", atrs: [], text: None, chid: [] }
+}
+
+///|
+pub fn Html::elem(self : Html, name : String) -> Html {
+  { name, atrs: self.atrs, text: self.text, chid: self.chid }
+}
+
+///|
+pub fn Html::attr(self : Html, name : String, value : String) -> Html {
+  let atrs = self.atrs.copy()
+  atrs.push((name, value))
+  { name: self.name, atrs, text: self.text, chid: self.chid }
+}
+
+///|
+pub fn Html::text(self : Html, value : String) -> Html {
+  { name: self.name, atrs: self.atrs, text: Some(value), chid: self.chid }
+}
+
+///|
+pub fn Html::chid(self : Html, item : Html) -> Html {
+  let chid = self.chid.copy()
+  chid.push(item)
+  { name: self.name, atrs: self.atrs, text: self.text, chid }
+}
+
+///|
+pub fn elem(name : String) -> String {
+  name
+}
+
+///|
+pub fn attr(name : String, value : String) -> (String, String) {
+  (name, value)
+}
+
+///|
+pub fn chid(item : Html) -> Html {
+  item
+}
+
+///|
+pub fn mach() -> Mach {
+  { stat: [], tran: [], evnt: [], init: None }
+}
+
+///|
+pub fn Mach::stat(self : Mach, name : String) -> Mach {
+  let stat = self.stat.copy()
+  stat.push(name)
+  { stat, tran: self.tran, evnt: self.evnt, init: self.init }
+}
+
+///|
+pub fn Mach::tran(self : Mach, name : String) -> Mach {
+  let tran = self.tran.copy()
+  tran.push(name)
+  { stat: self.stat, tran, evnt: self.evnt, init: self.init }
+}
+
+///|
+pub fn Mach::evnt(self : Mach, name : String) -> Mach {
+  let evnt = self.evnt.copy()
+  evnt.push(name)
+  { stat: self.stat, tran: self.tran, evnt, init: self.init }
+}
+
+///|
+pub fn Mach::init(self : Mach, name : String) -> Mach {
+  { stat: self.stat, tran: self.tran, evnt: self.evnt, init: Some(name) }
+}
+
+///|
+pub fn stat(name : String) -> String {
+  name
+}
+
+///|
+pub fn tran(name : String) -> String {
+  name
+}
+
+///|
+pub fn evnt(name : String) -> String {
+  name
+}
+
+///|
+
+///|
+pub fn tstx(name : String) -> Tstx {
+  { name, givn: [], when: [], chec: [] }
+}
+
+///|
+pub fn Tstx::givn(self : Tstx, text : String) -> Tstx {
+  let givn = self.givn.copy()
+  givn.push(text)
+  { name: self.name, givn, when: self.when, chec: self.chec }
+}
+
+///|
+pub fn Tstx::when(self : Tstx, text : String) -> Tstx {
+  let when = self.when.copy()
+  when.push(text)
+  { name: self.name, givn: self.givn, when, chec: self.chec }
+}
+
+///|
+pub fn Tstx::chec(self : Tstx, text : String) -> Tstx {
+  let chec = self.chec.copy()
+  chec.push(text)
+  { name: self.name, givn: self.givn, when: self.when, chec }
+}
+
+///|
+pub fn givn(text : String) -> String {
+  text
+}
+
+///|
+pub fn when(text : String) -> String {
+  text
+}
