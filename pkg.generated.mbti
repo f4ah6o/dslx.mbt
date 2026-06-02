@@ -223,6 +223,7 @@ pub(all) struct Oper {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Pout {
+  done : Bool
   tree : Tree?
   posx : Int
   digs : Array[Diag]

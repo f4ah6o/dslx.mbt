@@ -22,7 +22,12 @@ test {
   inspect(@dslx.name(spec), content="sql")
   inspect(@dslx.mods(@dslx.emit(spec)).length(), content="4")
   let parsed = @dslx.runx(spec, "decl", "let user")
+  inspect(parsed.done, content="true")
   inspect(parsed.posx, content="8")
+  match parsed.tree {
+    Some(tree) => inspect(tree.kids[1].kind, content="refx:expr")
+    None => inspect("none", content="tree")
+  }
 }
 ```
 
@@ -48,11 +53,15 @@ The code generator returns virtual files only. It does not write to disk.
 
 ## Core v1 Contracts
 
-`pars(expr, text)` parses a single expression tree. It does not resolve `refx`, so named rule references should be executed through `runx(spec, rule, text)`.
+`Pout` is the parser result. `done` is true only when parsing succeeded and all non-whitespace input was consumed, `tree` contains the parse tree on success, `posx` is the final byte offset after trailing whitespace is skipped, and `digs` contains diagnostics.
 
-`runx` looks up the start rule by name, then resolves `refx("name")` against the spec rules. Missing start rules or missing references produce `fail` diagnostics.
+`pars(expr, text)` parses a single expression tree. It does not resolve `refx`, so named rule references should be executed through `runx(spec, rule, text)`. `pars` is strict: it skips whitespace before tokens and expressions, accepts trailing whitespace, and fails if any non-whitespace input remains after a successful expression parse. Leftover input returns `done=false`, `tree=None`, and a `fail("unexpected input")` diagnostic whose span is `span("", leftover_pos, leftover_pos)`.
+
+`runx` looks up the start rule by name, then resolves `refx("name")` against the spec rules. It uses the same strict final-consumption rule as `pars`. Missing start rules or missing references produce `fail` diagnostics with spans. Successful `refx` parses keep a wrapper tree named `refx:<name>` around the referenced rule tree.
 
 `rgxx` intentionally supports only explicit scanner patterns in Core v1: `[0-9]+` and `[a-zA-Z_][a-zA-Z0-9_]*`. Unsupported patterns fail validation and fail parsing instead of being treated as literal prefixes.
+
+Parse diagnostics include span information for literal, token, `rgxx`, `refx`, start-rule, and `refx` cycle failures. When there is no wider source range, the parser uses a zero-width span at the current byte offset.
 
 Parser combinator diagnostics are conservative: `altx` discards failed earlier branches once a later branch succeeds, `many` stops on the first failed child parse without surfacing that child diagnostic, and `optx` succeeds with an empty tree when its child fails.
 
