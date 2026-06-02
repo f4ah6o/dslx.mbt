@@ -35,6 +35,7 @@ test "parser executes sequence with tokens and digits" {
     @dslx.rgxx("[0-9]+"),
   ])
   let out = @dslx.pars(expr, "if user_1 42")
+  inspect(out.done, content="true")
   inspect(out.posx, content="12")
   inspect(out.digs.length(), content="0")
   match out.tree {
@@ -51,6 +52,7 @@ test "parser supports alternatives many and optional" {
     @dslx.optx(@dslx.litx(";")),
   ])
   let out = @dslx.pars(expr, "var 1 22 ;")
+  inspect(out.done, content="true")
   inspect(out.posx, content="10")
   match out.tree {
     Some(tree) => inspect(tree.kids.length(), content="3")
@@ -68,6 +70,7 @@ test "runx resolves named rule references" {
       ),
     )
   let out = @dslx.runx(spec, "decl", "let alpha_1 42")
+  inspect(out.done, content="true")
   inspect(out.posx, content="14")
   inspect(out.digs.length(), content="0")
   match out.tree {
@@ -107,8 +110,13 @@ test "runx fails refx cycle without recursion" {
     .rule(@dslx.rule("a").body(@dslx.refx("b")))
     .rule(@dslx.rule("b").body(@dslx.refx("a")))
   let out = @dslx.runx(spec, "a", "")
+  inspect(out.done, content="false")
   inspect(out.tree is None, content="true")
   inspect(out.digs[0].text, content="refx cycle")
+  match out.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
   match out.digs[0].hint {
     Some(value) => inspect(value, content="a -> b -> a")
     None => inspect("none", content="hint")
@@ -123,8 +131,13 @@ test "unsupported rgxx fails validation and parsing" {
   let digs = @dslx.vspc(spec)
   inspect(digs[1].text, content="unsupported rgxx")
   let out = @dslx.pars(@dslx.rgxx("[a-z]+"), "[a-z]+")
+  inspect(out.done, content="false")
   inspect(out.tree is None, content="true")
   inspect(out.digs[0].text, content="unsupported pattern")
+  match out.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
 }
 
 ///|
@@ -157,8 +170,72 @@ test "validator reports undefined refx empty grammar and duplicates" {
 ///|
 test "parser reports failed literal" {
   let out = @dslx.pars(@dslx.litx("if"), "else")
+  inspect(out.done, content="false")
   inspect(out.tree is None, content="true")
   inspect(out.digs.length(), content="1")
+  match out.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
+}
+
+///|
+test "strict parse allows only trailing whitespace" {
+  let ok = @dslx.pars(@dslx.litx("if"), "  if \n\t")
+  inspect(ok.done, content="true")
+  inspect(ok.posx, content="7")
+  inspect(ok.digs.length(), content="0")
+  match ok.tree {
+    Some(tree) => inspect(tree.text, content="if")
+    None => inspect("none", content="tree")
+  }
+
+  let bad = @dslx.pars(@dslx.litx("if"), "if else")
+  inspect(bad.done, content="false")
+  inspect(bad.tree is None, content="true")
+  inspect(bad.digs.length(), content="1")
+  inspect(bad.digs[0].text, content="unexpected input")
+  match bad.digs[0].span {
+    Some(span) => {
+      inspect(span.from, content="3")
+      inspect(span.upto, content="3")
+    }
+    None => inspect("none", content="span")
+  }
+}
+
+///|
+test "parse failures include spans" {
+  let token = @dslx.pars(@dslx.tokn("name"), "  123")
+  inspect(token.digs[0].text, content="expected token")
+  match token.digs[0].span {
+    Some(span) => inspect(span.from, content="2")
+    None => inspect("none", content="span")
+  }
+
+  let regex = @dslx.pars(@dslx.rgxx("[0-9]+"), "abc")
+  inspect(regex.digs[0].text, content="expected pattern")
+  match regex.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
+
+  let spec = @dslx.dslx("core").rule(
+    @dslx.rule("decl").body(@dslx.refx("name")),
+  )
+  let refx = @dslx.runx(spec, "decl", "")
+  inspect(refx.digs[0].text, content="undefined rule")
+  match refx.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
+
+  let start = @dslx.runx(spec, "miss", "")
+  inspect(start.digs[0].text, content="unknown start rule")
+  match start.digs[0].span {
+    Some(span) => inspect(span.from, content="0")
+    None => inspect("none", content="span")
+  }
 }
 
 ///|

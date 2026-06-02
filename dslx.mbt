@@ -114,6 +114,7 @@ pub(all) struct Vctx {
 
 ///|
 pub(all) struct Pout {
+  done : Bool
   tree : Tree?
   posx : Int
   digs : Array[Diag]
@@ -337,15 +338,40 @@ pub fn refx(text : String) -> Expr {
 
 ///|
 pub fn pars(expr : Expr, text : String) -> Pout {
-  pexp(expr, text, 0)
+  pend(pexp(expr, text, 0), text)
 }
 
 ///|
 pub fn runx(spec : Dslx, rule : String, text : String) -> Pout {
   match frul(spec.spec.ruls, rule) {
-    Some(expr) => pexs(expr, spec.spec.ruls, [rule], text, 0)
+    Some(expr) => pend(pexs(expr, spec.spec.ruls, [rule], text, 0), text)
     None =>
-      { tree: None, posx: 0, digs: [fail("unknown start rule").hint(rule)] }
+      {
+        done: false,
+        tree: None,
+        posx: 0,
+        digs: [fail("unknown start rule").span(span("", 0, 0)).hint(rule)],
+      }
+  }
+}
+
+///|
+fn pend(out : Pout, text : String) -> Pout {
+  match out.tree {
+    Some(_) => {
+      let posx = sksp(text, out.posx)
+      if posx == text.length() {
+        { done: true, tree: out.tree, posx, digs: out.digs }
+      } else {
+        {
+          done: false,
+          tree: None,
+          posx,
+          digs: [fail("unexpected input").span(span("", posx, posx))],
+        }
+      }
+    }
+    None => { done: false, tree: None, posx: out.posx, digs: out.digs }
   }
 }
 
@@ -369,7 +395,14 @@ fn pexs(
     Rgxx(patt) => preg(patt, text, posx)
     Refx(name) =>
       if hasx(stkx, name) {
-        { tree: None, posx, digs: [fail("refx cycle").hint(ptxt(stkx, name))] }
+        {
+          done: false,
+          tree: None,
+          posx,
+          digs: [
+            fail("refx cycle").span(span("", posx, posx)).hint(ptxt(stkx, name)),
+          ],
+        }
       } else {
         match frul(rules, name) {
           Some(item) => {
@@ -379,6 +412,7 @@ fn pexs(
             match out.tree {
               Some(node) =>
                 {
+                  done: true,
                   tree: Some(tree("refx:" + name, "", kids=[node])),
                   posx: out.posx,
                   digs: out.digs,
@@ -387,7 +421,14 @@ fn pexs(
             }
           }
           None =>
-            { tree: None, posx, digs: [fail("undefined rule").hint(name)] }
+            {
+              done: false,
+              tree: None,
+              posx,
+              digs: [
+                fail("undefined rule").span(span("", posx, posx)).hint(name),
+              ],
+            }
         }
       }
     Seqx(items) => pseq(items, rules, stkx, text, posx)
@@ -397,10 +438,12 @@ fn pexs(
       let out = pexs(item, rules, stkx, text, posx)
       match out.tree {
         Some(_) => out
-        None => { tree: Some(tree("optx", "", kids=[])), posx, digs: [] }
+        None =>
+          { done: true, tree: Some(tree("optx", "", kids=[])), posx, digs: [] }
       }
     }
-    Atom => { tree: Some(tree("atom", "", kids=[])), posx, digs: [] }
+    Atom =>
+      { done: true, tree: Some(tree("atom", "", kids=[])), posx, digs: [] }
   }
 }
 
@@ -425,10 +468,10 @@ fn pseq(
         kids.push(tree)
         posx = out.posx
       }
-      None => return { tree: None, posx, digs }
+      None => return { done: false, tree: None, posx, digs }
     }
   }
-  { tree: Some(tree("seqx", "", kids~)), posx, digs }
+  { done: true, tree: Some(tree("seqx", "", kids~)), posx, digs }
 }
 
 ///|
@@ -446,6 +489,7 @@ fn palt(
       Some(node) =>
         // Earlier failed alternatives are intentionally discarded once a later branch matches.
         return {
+          done: true,
           tree: Some(tree("altx", "", kids=[node])),
           posx: out.posx,
           digs: out.digs,
@@ -456,8 +500,8 @@ fn palt(
         }
     }
   }
-  digs.push(fail("no alternative matched"))
-  { tree: None, posx, digs }
+  digs.push(fail("no alternative matched").span(span("", posx, posx)))
+  { done: false, tree: None, posx, digs }
 }
 
 ///|
@@ -486,13 +530,14 @@ fn pmny(
   }
   // A failed child parse terminates zero-or-more parsing; it is not a
   // diagnostic for the caller because Many succeeds with the trees collected.
-  { tree: Some(tree("many", "", kids~)), posx, digs: [] }
+  { done: true, tree: Some(tree("many", "", kids~)), posx, digs: [] }
 }
 
 ///|
 fn plit(value : String, text : String, posx : Int) -> Pout {
   if pref(text, posx, value) {
     {
+      done: true,
       tree: Some(
         tree("litx", value, kids=[], span=span("", posx, posx + value.length())),
       ),
@@ -500,7 +545,12 @@ fn plit(value : String, text : String, posx : Int) -> Pout {
       digs: [],
     }
   } else {
-    { tree: None, posx, digs: [fail("expected literal").hint(value)] }
+    {
+      done: false,
+      tree: None,
+      posx,
+      digs: [fail("expected literal").span(span("", posx, posx)).hint(value)],
+    }
   }
 }
 
@@ -510,12 +560,18 @@ fn ptok(name : String, text : String, posx : Int) -> Pout {
   if endx > posx {
     let value = text.view(start_offset=posx, end_offset=endx).to_owned()
     {
+      done: true,
       tree: Some(tree(name, value, kids=[], span=span("", posx, endx))),
       posx: endx,
       digs: [],
     }
   } else {
-    { tree: None, posx, digs: [fail("expected token").hint(name)] }
+    {
+      done: false,
+      tree: None,
+      posx,
+      digs: [fail("expected token").span(span("", posx, posx)).hint(name)],
+    }
   }
 }
 
@@ -526,20 +582,29 @@ fn preg(patt : String, text : String, posx : Int) -> Pout {
     "[a-zA-Z_][a-zA-Z0-9_]*" => scan(text, posx, true)
     _ =>
       return {
+        done: false,
         tree: None,
         posx,
-        digs: [fail("unsupported pattern").hint(patt)],
+        digs: [
+          fail("unsupported pattern").span(span("", posx, posx)).hint(patt),
+        ],
       }
   }
   if endx > posx {
     let value = text.view(start_offset=posx, end_offset=endx).to_owned()
     {
+      done: true,
       tree: Some(tree("rgxx", value, kids=[], span=span("", posx, endx))),
       posx: endx,
       digs: [],
     }
   } else {
-    { tree: None, posx, digs: [fail("expected pattern").hint(patt)] }
+    {
+      done: false,
+      tree: None,
+      posx,
+      digs: [fail("expected pattern").span(span("", posx, posx)).hint(patt)],
+    }
   }
 }
 
