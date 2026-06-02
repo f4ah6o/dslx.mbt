@@ -51,6 +51,25 @@ test {
 }
 ```
 
+`fspc`, `runp`, and `chex` make the project layer useful without unpacking the
+`dslx` array manually. `runp` routes parsing through the named spec and rule.
+`chex` checks an example file and returns parser diagnostics only when it fails.
+
+```mbt check
+///|
+test {
+  let file = @dslx.file("examples/fwd.dsl", "schema User id:int\n")
+  let prj = @dslx.proj("family").exmp(file).dslx(@dslx.fwds())
+  inspect(@dslx.fspc(prj, "Fwd") is Some(_), content="true")
+  inspect(@dslx.runp(prj, "Fwd", "sche", file.text).done, content="true")
+  inspect(@dslx.chex(prj, "Fwd", "sche", file).length(), content="0")
+  inspect(
+    @dslx.runp(prj, "Missing", "sche", file.text).digs[0].text,
+    content="unknown project spec",
+  )
+}
+```
+
 ## Public API
 
 The main objects are `Dslx`, `Spec`, `Proj`, `Node`, `Rule`, `Tree`, and `Diag`. The public traits are `Pars`, `Vald`, `Prnt`, and `Emit`.
@@ -61,11 +80,11 @@ The builder surface includes:
 - AST: `node`, `case`, `fldx`, `tree`, `span`
 - grammar: `rule`, `body`, `seqx`, `altx`, `many`, `optx`, `litx`, `tokn`, `rgxx`, `refx`
 - Pratt parser: `prat`, `pref`, `infx`, `post`, `atom`
-- parser: `pars`, `runx`
+- parser: `pars`, `runx`, `runp`
 - validation and diagnostics: `vald`, `vspc`, `chec`, `warn`, `fail`, `hint`, `diag`
 - printing: `prnt`, `grup`, `line`, `join`, `nest`, `brkx`
 - codegen: `emit`, `file`, `mods`, `path`
-- project: `pack`, `vprj`, methods `dslx`, `exmp`, `file`
+- project: `pack`, `vprj`, `fspc`, `chex`, methods `dslx`, `exmp`, `file`
 - examples: `fwds`, `wflw`, `domn`, `n8nx`, `rout`, `parm`, `bind`, `sqlx`, `slct`, `from`, `wher`, `ordr`, `limt`, `html`, `elem`, `attr`, `text`, `chid`, `mach`, `stat`, `tran`, `evnt`, method `init`, `tstx`, `givn`, `when`
 
 The code generator returns virtual files only. It does not write to disk.
@@ -89,3 +108,5 @@ Parser combinator diagnostics are conservative: `altx` discards failed earlier b
 `vspc` validates empty names, generated-name readiness, duplicate node/case/field/rule names, undefined `refx`, unsupported `rgxx`, and empty `seqx`/`altx`. Generated-name readiness rejects spec, node, case, field, and rule names that are not MoonBit identifiers: the first byte must be an ASCII letter or `_`, later bytes must be ASCII letters, digits, or `_`, and reserved words are not accepted. Diagnostics remain `Diag` values with `kind` set to `fail` or `warn` plus short hints where useful.
 
 `pack(proj)` keeps file order stable: explicit project files, example files, then generated files for each `Dslx` in insertion order. Generated files are namespaced as `<SpecName>/astx.mbt`, `<SpecName>/pars.mbt`, `<SpecName>/vald.mbt`, and `<SpecName>/prnt.mbt`, which lets multiple DSL specs coexist in one virtual project package. `vprj` combines spec validation with duplicate spec-name and duplicate virtual-path diagnostics.
+
+`fspc(proj, name)` returns the matching `Dslx` by spec name. `runp(proj, spec, rule, text)` is the project-level parser entrypoint; it returns the same `Pout` as `runx` when the spec exists and returns `fail("unknown project spec")` when it does not. `chex(proj, spec, rule, file)` parses `file.text` through `runp` and returns an empty diagnostic array for successful examples.

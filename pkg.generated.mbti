@@ -22,6 +22,8 @@ pub fn case(String) -> Case
 
 pub fn chec(Vctx, Bool, String) -> Vctx
 
+pub fn chex(Proj, String, String, File) -> Array[Diag]
+
 pub fn chid(Html) -> Html
 
 pub fn diag(String, String) -> Diag
@@ -43,6 +45,8 @@ pub fn file(String, String) -> File
 pub fn fldx(String, String) -> Fldx
 
 pub fn from(Array[String]) -> Array[String]
+
+pub fn fspc(Proj, String) -> Dslx?
 
 pub fn fwds() -> Dslx
 
@@ -101,6 +105,8 @@ pub fn rgxx(String) -> Expr
 pub fn rout() -> Rout
 
 pub fn rule(String) -> Rule
+
+pub fn runp(Proj, String, String, String) -> Pout
 
 pub fn runx(Dslx, String, String) -> Pout
 

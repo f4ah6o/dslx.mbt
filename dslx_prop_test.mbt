@@ -443,6 +443,51 @@ test "quickcheck project pack order and generated parser stay stable" {
 }
 
 ///|
+test "quickcheck project lookup parse and examples agree with specs" {
+  let seeds : Array[PairSeed] = @quickcheck.samples(180)
+  for seed in seeds {
+    let suffix = valid_ident(seed.left)
+    let spec_name = "Spec" + suffix
+    let rule = "main" + valid_ident(seed.right)
+    let input = valid_ident(seed.right) + " " + digit_text(seed.left)
+    let spec = @dslx.dslx(spec_name)
+      .rule(@dslx.rule("name").body(@dslx.rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
+      .rule(@dslx.rule("num").body(@dslx.rgxx("[0-9]+")))
+      .rule(
+        @dslx.rule(rule).body(
+          @dslx.seqx([@dslx.refx("name"), @dslx.refx("num")]),
+        ),
+      )
+    let file = @dslx.file("examples/" + suffix + ".dsl", input)
+    let prj = @dslx.proj("Proj" + suffix)
+      .exmp(file)
+      .dslx(@dslx.fwds())
+      .dslx(spec)
+      .dslx(@dslx.wflw())
+    match @dslx.fspc(prj, spec_name) {
+      Some(found) => {
+        guard @dslx.name(found) == spec_name else { panic() }
+        guard @dslx.runp(prj, spec_name, rule, input) ==
+          @dslx.runx(found, rule, input) else {
+          panic()
+        }
+      }
+      None => panic()
+    }
+    guard @dslx.fspc(prj, "Missing" + suffix) is None else { panic() }
+    guard @dslx.chex(prj, spec_name, rule, file).length() == 0 else { panic() }
+    let unknown = @dslx.runp(prj, "Missing" + suffix, rule, input)
+    guard !unknown.done else { panic() }
+    guard unknown.tree is None else { panic() }
+    guard has_diag(unknown.digs, "unknown project spec", "Missing" + suffix) else {
+      panic()
+    }
+    let bad = @dslx.chex(prj, spec_name, rule, @dslx.file("bad.dsl", "123"))
+    guard bad.length() > 0 else { panic() }
+  }
+}
+
+///|
 test "quickcheck project duplicate diagnostics stay stable" {
   let seeds : Array[Int] = @quickcheck.samples(120)
   for seed in seeds {

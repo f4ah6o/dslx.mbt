@@ -20,6 +20,45 @@ pub fn Proj::file(self : Proj, item : File) -> Proj {
 }
 
 ///|
+pub fn fspc(value : Proj, name : String) -> Dslx? {
+  for item in value.dslx {
+    if item.spec.name == name {
+      return Some(item)
+    }
+  }
+  None
+}
+
+///|
+pub fn runp(value : Proj, spec : String, rule : String, text : String) -> Pout {
+  match fspc(value, spec) {
+    Some(item) => runx(item, rule, text)
+    None =>
+      {
+        done: false,
+        tree: None,
+        posx: 0,
+        digs: [fail("unknown project spec").span(span("", 0, 0)).hint(spec)],
+      }
+  }
+}
+
+///|
+pub fn chex(
+  value : Proj,
+  spec : String,
+  rule : String,
+  file : File,
+) -> Array[Diag] {
+  let out = runp(value, spec, rule, file.text)
+  if out.done {
+    []
+  } else {
+    out.digs
+  }
+}
+
+///|
 pub fn pack(value : Proj) -> Array[File] {
   let out : Array[File] = []
   for item in value.mods {
