@@ -287,17 +287,94 @@ pub fn fwds() -> Dslx {
     .case(
       case("Root")
       .fldx(fldx("name", "String"))
-      .fldx(fldx("cols", "Array[String]")),
+      .fldx(fldx("items", "Array[String]")),
+    )
+    .case(case("State").fldx(fldx("name", "String")))
+    .case(
+      case("Field").fldx(fldx("name", "String")).fldx(fldx("typx", "String")),
     )
     .case(
-      case("Colu").fldx(fldx("name", "String")).fldx(fldx("typx", "String")),
+      case("Entity")
+      .fldx(fldx("name", "String"))
+      .fldx(fldx("fields", "Array[String]")),
+    )
+    .case(
+      case("Transition")
+      .fldx(fldx("name", "String"))
+      .fldx(fldx("from", "String"))
+      .fldx(fldx("upto", "String")),
+    )
+    .case(case("Effect").fldx(fldx("name", "String")))
+    .case(
+      case("Rule")
+      .fldx(fldx("name", "String"))
+      .fldx(fldx("kind", "String"))
+      .fldx(fldx("body", "String")),
     ),
   )
   .rule(rule("name").body(rgxx("[a-zA-Z_][a-zA-Z0-9_]*")))
   .rule(rule("typx").body(altx([litx("text"), litx("int"), litx("bool")])))
-  .rule(rule("colu").body(seqx([refx("name"), litx(":"), refx("typx")])))
+  .rule(rule("fldx").body(seqx([refx("name"), litx(":"), refx("typx")])))
+  .rule(rule("stat").body(seqx([litx("state"), refx("name")])))
   .rule(
-    rule("sche").body(seqx([litx("schema"), refx("name"), many(refx("colu"))])),
+    rule("enty").body(
+      seqx([
+        litx("entity"),
+        refx("name"),
+        litx("{"),
+        many(refx("fldx")),
+        litx("}"),
+      ]),
+    ),
+  )
+  .rule(
+    rule("tref").body(
+      altx([
+        seqx([litx("rule"), refx("name")]),
+        seqx([litx("effect"), refx("name")]),
+      ]),
+    ),
+  )
+  .rule(
+    rule("tran").body(
+      seqx([
+        litx("transition"),
+        refx("name"),
+        litx(":"),
+        refx("name"),
+        litx("->"),
+        refx("name"),
+        optx(seqx([litx("{"), many(refx("tref")), litx("}")])),
+      ]),
+    ),
+  )
+  .rule(rule("effx").body(seqx([litx("effect"), refx("name")])))
+  .rule(
+    rule("rkind").body(
+      altx([
+        seqx([litx("preset"), refx("name")]),
+        seqx([litx("custom"), refx("name")]),
+      ]),
+    ),
+  )
+  .rule(
+    rule("rulx").body(
+      seqx([litx("rule"), refx("name"), litx(":"), refx("rkind")]),
+    ),
+  )
+  .rule(
+    rule("item").body(
+      altx([
+        refx("stat"),
+        refx("enty"),
+        refx("tran"),
+        refx("effx"),
+        refx("rulx"),
+      ]),
+    ),
+  )
+  .rule(
+    rule("sche").body(seqx([litx("schema"), refx("name"), many(refx("item"))])),
   )
 }
 

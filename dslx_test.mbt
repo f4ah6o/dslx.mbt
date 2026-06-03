@@ -420,7 +420,11 @@ test "test dsl uses tstx alias" {
 test "project pack returns deterministic virtual files" {
   let prj = @dslx.proj("family")
     .file(@dslx.file("README.md", "# family\n"))
-    .exmp(@dslx.file("examples/fwd.dsl", "schema User id:int\n"))
+    .exmp(
+      @dslx.file(
+        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
+      ),
+    )
     .dslx(@dslx.dslx("Tiny").rule(@dslx.rule("main").body(@dslx.litx("ok"))))
   let files = @dslx.pack(prj)
   inspect(files.length(), content="6")
@@ -437,7 +441,7 @@ test "project pack returns deterministic virtual files" {
 ///|
 test "project lookup parse and example checks route through specs" {
   let fwd_file = @dslx.file(
-    "examples/fwd.dsl", "schema User id:int name:text\n",
+    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
   )
   let flow_file = @dslx.file(
     "examples/flow.dsl", "flow Build node Fetch Fetch -> Save",
@@ -495,9 +499,12 @@ test "family example specs validate and parse their roots" {
   inspect(@dslx.vspc(domn).length(), content="0")
   inspect(@dslx.vspc(n8n).length(), content="0")
   inspect(
-    @dslx.runx(fwd, "sche", "schema User id:int name:text").done,
+    @dslx.runx(
+      fwd, "sche", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }",
+    ).done,
     content="true",
   )
+  inspect(@dslx.runx(fwd, "sche", "schema User id:blob").done, content="false")
   inspect(
     @dslx.runx(flow, "flow", "flow Build node Fetch Fetch -> Save").done,
     content="true",
