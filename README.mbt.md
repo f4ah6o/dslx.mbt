@@ -40,7 +40,11 @@ MoonBit uses `test` as syntax, so the test DSL entrypoint is exported as `tstx`.
 test {
   let prj = @dslx.proj("family")
     .file(@dslx.file("README.md", "# family\n"))
-    .exmp(@dslx.file("examples/fwd.dsl", "schema User id:int\n"))
+    .exmp(
+      @dslx.file(
+        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+      ),
+    )
     .dslx(@dslx.fwds())
     .dslx(@dslx.wflw())
   let files = @dslx.pack(prj)
@@ -58,7 +62,9 @@ test {
 ```mbt check
 ///|
 test {
-  let file = @dslx.file("examples/fwd.dsl", "schema User id:int\n")
+  let file = @dslx.file(
+    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+  )
   let prj = @dslx.proj("family").exmp(file).dslx(@dslx.fwds())
   inspect(@dslx.fspc(prj, "Fwd") is Some(_), content="true")
   inspect(@dslx.runp(prj, "Fwd", "sche", file.text).done, content="true")
