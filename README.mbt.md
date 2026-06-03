@@ -42,7 +42,7 @@ test {
     .file(@dslx.file("README.md", "# family\n"))
     .exmp(
       @dslx.file(
-        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
       ),
     )
     .dslx(@dslx.fwds())
@@ -63,7 +63,7 @@ test {
 ///|
 test {
   let file = @dslx.file(
-    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
   )
   let prj = @dslx.proj("family").exmp(file).dslx(@dslx.fwds())
   inspect(@dslx.fspc(prj, "Fwd") is Some(_), content="true")

@@ -422,7 +422,7 @@ test "project pack returns deterministic virtual files" {
     .file(@dslx.file("README.md", "# family\n"))
     .exmp(
       @dslx.file(
-        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+        "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
       ),
     )
     .dslx(@dslx.dslx("Tiny").rule(@dslx.rule("main").body(@dslx.litx("ok"))))
@@ -441,7 +441,7 @@ test "project pack returns deterministic virtual files" {
 ///|
 test "project lookup parse and example checks route through specs" {
   let fwd_file = @dslx.file(
-    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity\n",
+    "examples/fwd.dsl", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }\n",
   )
   let flow_file = @dslx.file(
     "examples/flow.dsl", "flow Build node Fetch Fetch -> Save",
@@ -500,7 +500,7 @@ test "family example specs validate and parse their roots" {
   inspect(@dslx.vspc(n8n).length(), content="0")
   inspect(
     @dslx.runx(
-      fwd, "sche", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released effect save rule hasEntity",
+      fwd, "sche", "schema User state Draft state Released entity User { id:int name:text } rule hasEntity: custom entityCheck transition submit: Draft -> Released { effect save rule hasEntity }",
     ).done,
     content="true",
   )

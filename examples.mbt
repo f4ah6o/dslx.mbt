@@ -344,7 +344,7 @@ pub fn fwds() -> Dslx {
         refx("name"),
         litx("->"),
         refx("name"),
-        many(refx("tref")),
+        optx(seqx([litx("{"), many(refx("tref")), litx("}")])),
       ]),
     ),
   )
