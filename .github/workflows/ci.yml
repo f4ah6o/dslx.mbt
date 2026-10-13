@@ -44,6 +44,9 @@ jobs:
           moon version --all
           node --version
 
+      - name: Update registry index
+        run: moon update
+
       - name: Check all targets
         run: moon check --target all -j 2
 

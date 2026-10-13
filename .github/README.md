@@ -10,6 +10,9 @@ moon check --target all -j 2
 moon test --target all -j 2
 ```
 
+The job first runs `moon update` to populate the fresh runner's registry index
+so the existing pinned package dependency can be resolved.
+
 For this pinned release, `all` exercises wasm, wasm-gc, js, and native. The job
 includes the 46 existing tests, including the fixed-seed core QuickCheck models.
 It validates Linux; Windows and macOS behavior needs separate execution.
