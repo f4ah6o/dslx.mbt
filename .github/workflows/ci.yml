@@ -1,0 +1,54 @@
+name: MoonBit CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: moonbit-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Official toolchain/core release, matching the locally verified compiler.
+      MOONBIT_VERSION: 0.10.14+7d59c7ec9
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install pinned official MoonBit toolchain
+        shell: bash
+        run: |
+          moon_home="${RUNNER_TEMP}/moonbit"
+          installer="${RUNNER_TEMP}/install-moonbit.sh"
+          curl --fail --silent --show-error --location \
+            https://cli.moonbitlang.com/install/unix.sh --output "$installer"
+          MOON_HOME="$moon_home" PATH="$moon_home/bin:$PATH" \
+            bash "$installer" "$MOONBIT_VERSION"
+          echo "MOON_HOME=$moon_home" >> "$GITHUB_ENV"
+          echo "$moon_home/bin" >> "$GITHUB_PATH"
+
+      - name: Record tool versions
+        run: |
+          git rev-parse HEAD
+          moon version --all
+          node --version
+
+      - name: Check all targets
+        run: moon check --target all -j 2
+
+      - name: Test all targets
+        run: moon test --target all -j 2
+
+      # Full moon fmt --check is deferred: six untouched files have known
+      # baseline formatting differences. Those are separate from this gate.
